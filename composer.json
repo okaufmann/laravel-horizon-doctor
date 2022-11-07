@@ -1,24 +1,25 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "okaufmann/laravel-horizon-doctor",
+    "description": "Checks your Horizon config against the Laravel queue config to ensure everything is working as expected.",
     "keywords": [
-        ":vendor_name",
+        "okaufmann",
         "laravel",
-        ":package_slug"
+        "laravel-horizon-doctor"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/okaufmann/laravel-horizon-doctor",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Oliver Kaufmann",
+            "email": "okaufmann91@gmail.com",
             "role": "Developer"
         }
     ],
     "require": {
         "php": "^8.1",
         "spatie/laravel-package-tools": "^1.13.0",
-        "illuminate/contracts": "^9.0"
+        "illuminate/contracts": "^9.0",
+        "laravel/horizon": "^5.0"
     },
     "require-dev": {
         "laravel/pint": "^1.0",
@@ -35,13 +36,13 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories"
+            "Okaufmann\\LaravelHorizonDoctor\\": "src",
+            "Okaufmann\\LaravelHorizonDoctor\\Database\\Factories\\": "database/factories"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests"
+            "Okaufmann\\LaravelHorizonDoctor\\Tests\\": "tests"
         }
     },
     "scripts": {
@@ -61,10 +62,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Okaufmann\\LaravelHorizonDoctor\\LaravelHorizonDoctorServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "LaravelHorizonDoctor": "Okaufmann\\LaravelHorizonDoctor\\Facades\\LaravelHorizonDoctor"
             }
         }
     },

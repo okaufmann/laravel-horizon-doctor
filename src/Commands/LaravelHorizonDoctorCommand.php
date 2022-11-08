@@ -42,10 +42,8 @@ class LaravelHorizonDoctorCommand extends Command
 
             // check if connection of horizon queue is configured in queue config
             if (! ($queueConfigs[$horizonConfig['connection']] ?? false)) {
-                $errors[] = "Connection {$horizonConfig['connection']} not found for `{$key}` in config/queue.php";
+                $errors[] = "Connection {$horizonConfig['connection']} of Horizon worker `{$key}` does not exist in config/queue.php";
             }
-
-            $queueConnection = $queueConfigs[$horizonConfig['connection']];
 
             // check that horizon queue has a timout option
             if (! isset($horizonConfig['timeout'])) {
@@ -53,8 +51,9 @@ class LaravelHorizonDoctorCommand extends Command
             }
 
             // check that timeout is lower than retry_after
-            if (isset($horizonConfig['timeout']) && $horizonConfig['timeout'] >= $queueConnection['retry_after']) {
-                $errors[] = "`timeout` of configured horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should be marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$horizonConfig['timeout']}) set in config/queue.php";
+            $queueConnection = $queueConfigs[$horizonConfig['connection']] ?? null;
+            if ($queueConnection && isset($horizonConfig['timeout']) && $horizonConfig['timeout'] >= $queueConnection['retry_after']) {
+                $errors[] = "`timeout` of configured Horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should be marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$horizonConfig['timeout']}) set in config/queue.php";
             }
 
             if ($errors->count()) {

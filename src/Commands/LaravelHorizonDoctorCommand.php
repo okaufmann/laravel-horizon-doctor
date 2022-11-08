@@ -18,10 +18,7 @@ class LaravelHorizonDoctorCommand extends Command
 
         foreach ($default as $key => $value) {
             if (isset($horizonConfigs[$key])) {
-                $horizonConfigs[$key] = [
-                    ...$value,
-                    ...$horizonConfigs[$key],
-                ];
+                $horizonConfigs[$key] = array_merge($value, $horizonConfigs[$key]);
             }
         }
 

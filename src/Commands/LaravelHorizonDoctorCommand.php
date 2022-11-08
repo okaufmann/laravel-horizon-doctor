@@ -47,11 +47,6 @@ class LaravelHorizonDoctorCommand extends Command
 
             $queueConnection = $queueConfigs[$horizonConfig['connection']];
 
-            // check that queue of the connection is set in horizon
-            if (! in_array($queueConnection['queue'], $horizonConfig['queue'], true)) {
-                $errors[] = "Queue `{$queueConnection['queue']}` should be added to the `{$key}['queue']` array in config/horizon.php";
-            }
-
             // check that horizon queue has a timout option
             if (! isset($horizonConfig['timeout'])) {
                 $errors[] = "You should consider setting the `timeout` option for `{$key}` in config/horizon.php";

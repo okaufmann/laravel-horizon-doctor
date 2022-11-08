@@ -1,6 +1,6 @@
 {
     "name": "okaufmann/laravel-horizon-doctor",
-    "description": "Checks your Horizon config against the Laravel queue config to ensure everything is working as expected.",
+    "description": "Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected.",
     "keywords": [
         "okaufmann",
         "laravel",

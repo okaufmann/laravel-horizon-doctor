@@ -8,7 +8,7 @@ class LaravelHorizonDoctorCommand extends Command
 {
     public $signature = 'horizon:doctor';
 
-    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is working as expected.';
+    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected.';
 
     public function handle(): int
     {
@@ -40,13 +40,13 @@ class LaravelHorizonDoctorCommand extends Command
 
             // check that queue of the connection is set in horizon
             if (! in_array($queueConnection['queue'], $horizonConfig['queue'], true)) {
-                $errors[] = "Queue `{$queueConnection['queue']}` should be added to `{$key}['queue']` array in config/horizon.php";
+                $errors[] = "Queue `{$queueConnection['queue']}` should be added to the `{$key}['queue']` array in config/horizon.php";
             }
 
             // check that horizon queues are set in connection
             if ([$queueConnection['queue']] !== $horizonConfig['queue']) {
                 $diff = implode(',', array_diff($horizonConfig['queue'], [$queueConnection['queue']]));
-                $errors[] = "Queue `{$queueConnection['queue']}` should be the only queue in `{$key}['queue']` array in config/horizon.php ({$diff} are not provided by this connection)";
+                $errors[] = "Queue `{$queueConnection['queue']}` should be the only queue in the `{$key}['queue']` array in config/horizon.php ({$diff} are not provided by this connection)";
             }
 
             // check that horizon queue has a timout option
@@ -56,7 +56,7 @@ class LaravelHorizonDoctorCommand extends Command
 
             // check that timeout is lower than retry_after
             if (isset($horizonConfig['timeout']) && $horizonConfig['timeout'] >= $queueConnection['retry_after']) {
-                $errors[] = "`timeout` of configured horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$horizonConfig['timeout']}) set in config/queue.php";
+                $errors[] = "`timeout` of configured horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should be marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$horizonConfig['timeout']}) set in config/queue.php";
             }
             if ($errors->count()) {
                 $errors->each(fn ($error) => $this->error("- {$error}"));

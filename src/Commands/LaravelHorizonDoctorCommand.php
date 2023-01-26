@@ -50,7 +50,7 @@ class LaravelHorizonDoctorCommand extends Command
             // check that timeout is lower than retry_after
             $queueConnection = $queueConfigs[$horizonConfig['connection']] ?? null;
             if ($queueConnection && isset($horizonConfig['timeout']) && $horizonConfig['timeout'] >= $queueConnection['retry_after']) {
-                $errors[] = "`timeout` of configured Horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should be marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$horizonConfig['timeout']}) set in config/queue.php";
+                $errors[] = "`timeout` of configured Horizon queue `{$key}` ({$horizonConfig['timeout']}) in config/horizon.php should be marginally bigger than the `retry_after` option of the queue connection `{$key}` ({$queueConnection['retry_after']}) set in config/queue.php";
             }
 
             if ($errors->count()) {

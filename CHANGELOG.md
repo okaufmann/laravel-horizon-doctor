@@ -2,6 +2,15 @@
 
 All notable changes to `laravel-horizon-doctor` will be documented in this file.
 
+## v1.1.0 - 2023-02-15
+
+### What's Changed
+
+- Bump dependabot/fetch-metadata from 1.3.5 to 1.3.6 by @dependabot in https://github.com/okaufmann/laravel-horizon-doctor/pull/2
+- Added Laravel 10 support
+
+**Full Changelog**: https://github.com/okaufmann/laravel-horizon-doctor/compare/v1.0.0...v1.1.0
+
 ## v1.0.0 - 2023-01-26
 
 ### What's Changed

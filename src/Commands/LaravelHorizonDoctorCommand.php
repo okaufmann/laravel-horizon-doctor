@@ -103,9 +103,12 @@ class LaravelHorizonDoctorCommand extends Command
                 ->flatten()
                 ->unique()
                 ->values();
-            $defaultQueue = $queueConfig['queue'];
-            if (! $processedQueuesInHorizon->contains($defaultQueue)) {
-                $errors[] = "Default queue `{$defaultQueue}` of connection `{$connectionName}` will not be processed by any worker set in config/horizon.php";
+
+            $handledQueues = collect($queueConfig['queue']);
+            foreach ($handledQueues as $queue) {
+                if (! $processedQueuesInHorizon->contains($queue)) {
+                    $errors[] = "Queue `{$queue}` of connection `{$connectionName}` will not be processed by any worker set in config/horizon.php";
+                }
             }
 
             if ($errors->count()) {

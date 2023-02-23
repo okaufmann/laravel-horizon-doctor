@@ -2,6 +2,14 @@
 
 All notable changes to `laravel-horizon-doctor` will be documented in this file.
 
+## v1.1.1 - 2023-02-23
+
+### Changed
+
+- handle arrays as queue config
+
+**Full Changelog**: https://github.com/okaufmann/laravel-horizon-doctor/compare/v1.1.0...v1.1.1
+
 ## v1.1.0 - 2023-02-15
 
 ### What's Changed

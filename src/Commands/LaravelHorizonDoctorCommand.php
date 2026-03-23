@@ -13,12 +13,12 @@ class LaravelHorizonDoctorCommand extends Command
     public function handle(): int
     {
         $environments = config('horizon.environments');
-    
+
         foreach (array_keys($environments) as $env) {
             $this->info("Checking env `{$env}`");
             $this->checkEnvironment($env);
         }
-    
+
         return self::SUCCESS;
     }
 
@@ -40,7 +40,6 @@ class LaravelHorizonDoctorCommand extends Command
 
         return self::SUCCESS;
     }
-        
 
     protected function checkHorizonConfigs(array $horizonConfigs, array $queueConfigs)
     {

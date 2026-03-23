@@ -80,6 +80,7 @@ final class HorizonDoctorRunner
             }
 
             $command->info('Running environment-level queue checks...');
+            $command->comment('Each Redis queue connection in config/queue.php is checked against Horizon supervisors that use the same connection name; queue names must match where you dispatch jobs.');
             $failed = $this->runEnvironmentChecks($command, $this->environmentChecksAfterSupervisors, (string) $environment, $merged, $queueConnections) || $failed;
             $command->comment('');
         }

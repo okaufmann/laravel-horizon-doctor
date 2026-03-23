@@ -26,15 +26,18 @@ final class HorizonDoctorRunner
 
     public function run(Command $command): int
     {
+        $failed = false;
+
         foreach ($this->globalChecks as $check) {
             foreach ($check->check() as $message) {
                 $command->error("- {$message}");
+                $failed = true;
             }
         }
 
         $environments = config('horizon.environments');
         if (! is_array($environments) || $environments === []) {
-            return Command::SUCCESS;
+            return $failed ? Command::FAILURE : Command::SUCCESS;
         }
 
         $queueConnections = config('queue.connections', []);
@@ -47,7 +50,7 @@ final class HorizonDoctorRunner
 
             $merged = $this->merger->mergeSupervisorsForEnvironment((string) $environment);
 
-            $this->runEnvironmentChecks($command, $this->environmentChecksBeforeSupervisors, (string) $environment, $merged, $queueConnections);
+            $failed = $this->runEnvironmentChecks($command, $this->environmentChecksBeforeSupervisors, (string) $environment, $merged, $queueConnections) || $failed;
 
             foreach ($merged as $supervisorKey => $supervisorConfig) {
                 if (! is_array($supervisorConfig)) {
@@ -67,6 +70,7 @@ final class HorizonDoctorRunner
                 if ($supervisorErrors === []) {
                     $command->info('- Everything looks good!');
                 } else {
+                    $failed = true;
                     foreach ($supervisorErrors as $message) {
                         $command->error("- {$message}");
                     }
@@ -76,11 +80,11 @@ final class HorizonDoctorRunner
             }
 
             $command->info('Running environment-level queue checks...');
-            $this->runEnvironmentChecks($command, $this->environmentChecksAfterSupervisors, (string) $environment, $merged, $queueConnections);
+            $failed = $this->runEnvironmentChecks($command, $this->environmentChecksAfterSupervisors, (string) $environment, $merged, $queueConnections) || $failed;
             $command->comment('');
         }
 
-        return Command::SUCCESS;
+        return $failed ? Command::FAILURE : Command::SUCCESS;
     }
 
     /**
@@ -88,7 +92,7 @@ final class HorizonDoctorRunner
      * @param  array<string, array<string, mixed>>  $merged
      * @param  array<string, array<string, mixed>>  $queueConnections
      */
-    private function runEnvironmentChecks(Command $command, iterable $checks, string $environment, array $merged, array $queueConnections): void
+    private function runEnvironmentChecks(Command $command, iterable $checks, string $environment, array $merged, array $queueConnections): bool
     {
         $messages = [];
         foreach ($checks as $check) {
@@ -98,11 +102,13 @@ final class HorizonDoctorRunner
         if ($messages === []) {
             $command->info('- Everything looks good!');
 
-            return;
+            return false;
         }
 
         foreach ($messages as $message) {
             $command->error("- {$message}");
         }
+
+        return true;
     }
 }

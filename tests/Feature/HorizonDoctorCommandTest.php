@@ -36,3 +36,9 @@ it('runs the horizon doctor command against valid config', function () {
 it('registers the horizon doctor runner in the container', function () {
     expect(app(HorizonDoctorRunner::class))->toBeInstanceOf(HorizonDoctorRunner::class);
 });
+
+it('exits with failure when horizon environments are not configured', function () {
+    config(['horizon.environments' => []]);
+
+    $this->artisan('horizon:doctor')->assertExitCode(1);
+});

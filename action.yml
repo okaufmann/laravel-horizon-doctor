@@ -1,0 +1,60 @@
+name: Laravel Horizon Doctor
+description: >
+  Run Laravel Horizon Doctor against your app in CI: validates prerequisites, then runs
+  php artisan horizon:doctor to catch Horizon and queue configuration mismatches.
+author: Oliver Kaufmann
+
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  working-directory:
+    description: >
+      Path to your Laravel application root (where composer.json and artisan live),
+      relative to the repository root.
+    required: false
+    default: .
+  skip-prerequisites:
+    description: >
+      When true, skip PHP, Composer, and package presence checks. Use only for debugging;
+      the action will still fail if horizon:doctor exits non-zero.
+    required: false
+    default: "false"
+  minimum-php-version:
+    description: >
+      Minimum PHP version as major.minor (e.g. 8.4). Should match the constraint of the
+      okaufmann/laravel-horizon-doctor version you use.
+    required: false
+    default: "8.4"
+
+outputs:
+  result:
+    description: success when all doctor checks passed, failure otherwise
+    value: ${{ steps.horizon-doctor.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Verify prerequisites
+      if: inputs.skip-prerequisites != 'true'
+      shell: bash
+      env:
+        TARGET_DIR: ${{ github.workspace }}/${{ inputs.working-directory }}
+        MINIMUM_PHP_VERSION: ${{ inputs.minimum-php-version }}
+      run: bash --noprofile --norc "${{ github.action_path }}/scripts/verify-prerequisites.sh"
+
+    - name: Run Horizon Doctor
+      id: horizon-doctor
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set +e
+        php artisan horizon:doctor --no-interaction
+        code=$?
+        if [[ "$code" -eq 0 ]]; then
+          echo "result=success" >> "$GITHUB_OUTPUT"
+        else
+          echo "result=failure" >> "$GITHUB_OUTPUT"
+        fi
+        exit "$code"

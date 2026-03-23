@@ -21,6 +21,26 @@ composer require okaufmann/laravel-horizon-doctor
 php artisan horizon:doctor
 ```
 
+## GitHub Action
+
+Run the same checks in CI with the [composite action](https://docs.github.com/en/actions/creating-actions/creating-a-composite-action) published from this repository:
+
+```yaml
+jobs:
+  horizon-doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist
+      - uses: okaufmann/laravel-horizon-doctor@v1
+```
+
+Pin a **semver tag** (for example `v1.0.0`) instead of `@v1` if you want fully reproducible builds. Full inputs, outputs, prerequisite behavior, and Marketplace notes are documented in [action/README.md](action/README.md).
+
 ## Testing
 
 ```bash

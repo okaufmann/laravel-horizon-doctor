@@ -1,0 +1,27 @@
+name: validate-action
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - action.yml
+      - scripts/verify-prerequisites.sh
+      - .github/workflows/validate-action.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - action.yml
+      - scripts/verify-prerequisites.sh
+      - .github/workflows/validate-action.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Syntax-check prerequisite script
+        run: bash -n scripts/verify-prerequisites.sh
+
+      - name: Ensure prerequisite script is executable
+        run: test -x scripts/verify-prerequisites.sh

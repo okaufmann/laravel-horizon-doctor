@@ -3,6 +3,7 @@
 namespace Okaufmann\LaravelHorizonDoctor\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Laravel\Horizon\HorizonServiceProvider;
 use Okaufmann\LaravelHorizonDoctor\LaravelHorizonDoctorServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -20,6 +21,7 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app)
     {
         return [
+            HorizonServiceProvider::class,
             LaravelHorizonDoctorServiceProvider::class,
         ];
     }

@@ -1,0 +1,37 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks.git
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude_types: [ 'markdown' ]
+        exclude: ^(public/css/filament/.*|public/js/filament/.*|public/vendor/.*|.*\.snap)
+      - id: trailing-whitespace
+        exclude_types: [ 'markdown' ]
+        exclude: ^(public/css/filament/.*|public/js/filament/.*|public/vendor/.*|.*\.snap)
+      - id: mixed-line-ending
+      - id: fix-byte-order-marker
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [ commit-msg ]
+        # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
+        args:
+          - fix
+          - feat
+          - ops
+          - chore
+          - build
+          - ci
+          - docs
+          - perf
+          - refactor
+          - revert
+          - style
+          - test

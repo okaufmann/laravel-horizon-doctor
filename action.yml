@@ -1,7 +1,5 @@
 name: Laravel Horizon Doctor
-description: >
-  Run Laravel Horizon Doctor against your app in CI: validates prerequisites, then runs
-  php artisan horizon:doctor to catch Horizon and queue configuration mismatches.
+description: Run php artisan horizon:doctor in CI to validate Horizon and queue configuration.
 author: Oliver Kaufmann
 
 branding:

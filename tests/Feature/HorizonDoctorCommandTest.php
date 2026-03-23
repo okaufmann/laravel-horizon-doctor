@@ -74,7 +74,9 @@ it('exits successfully when only queue documentation warnings are reported', fun
         ],
     ]);
 
-    $this->artisan('horizon:doctor')->assertExitCode(0);
+    $this->artisan('horizon:doctor')
+        ->expectsOutputToContain('No errors found (see warnings above).')
+        ->assertExitCode(0);
 });
 
 it('fails with strict-warnings when queue documentation warnings are reported', function () {
@@ -260,6 +262,7 @@ it('omits the overview table when every queue row is OK', function () {
     $text = $out->fetch();
     expect($text)->not->toContain('Redis queue overview');
     expect($text)->toContain('Environment: local');
+    expect($text)->toContain('No errors found.');
 });
 
 it('hides the overview table with --no-overview', function () {

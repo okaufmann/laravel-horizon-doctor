@@ -57,6 +57,9 @@ final class HorizonDoctorRunner
 
             $merged = $this->merger->mergeSupervisorsForEnvironment((string) $environment);
 
+            $envHasErrors = false;
+            $envHasWarnings = false;
+
             if ($this->shouldShowOverview($command)) {
                 $this->renderRedisQueueOverview($command, (string) $environment, $merged, $queueConnections, $verbose);
             }
@@ -69,6 +72,8 @@ final class HorizonDoctorRunner
                 $queueConnections,
                 $verbose
             );
+            $envHasErrors = $envHasErrors || $envFailed;
+            $envHasWarnings = $envHasWarnings || $envWarnings;
             $failed = $envFailed || $failed;
             $hasWarnings = $envWarnings || $hasWarnings;
 
@@ -93,6 +98,7 @@ final class HorizonDoctorRunner
                     }
                 } else {
                     $command->line("Supervisor <fg=yellow>{$supervisorKey}</>");
+                    $envHasErrors = true;
                     $failed = true;
                     foreach ($supervisorErrors as $message) {
                         $command->error("  {$message}");
@@ -114,11 +120,22 @@ final class HorizonDoctorRunner
                 $queueConnections,
                 $verbose
             );
+            $envHasErrors = $envHasErrors || $envFailed;
+            $envHasWarnings = $envHasWarnings || $envWarnings;
             $failed = $envFailed || $failed;
             $hasWarnings = $envWarnings || $hasWarnings;
 
             if ($verbose) {
                 $command->comment('');
+            }
+
+            if (! $envHasErrors) {
+                if ($envHasWarnings) {
+                    $command->info('No errors found (see warnings above).');
+                } else {
+                    $command->info('No errors found.');
+                }
+                $command->newLine();
             }
         }
 

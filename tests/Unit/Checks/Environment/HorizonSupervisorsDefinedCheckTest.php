@@ -3,12 +3,17 @@
 use Okaufmann\LaravelHorizonDoctor\Checks\Environment\HorizonSupervisorsDefinedCheck;
 
 it('reports when no supervisors exist for an environment', function () {
-    $messages = (new HorizonSupervisorsDefinedCheck())->check('staging', [], []);
+    $result = (new HorizonSupervisorsDefinedCheck())->check('staging', [], []);
 
-    expect($messages)->not->toBeEmpty();
-    expect($messages[0])->toContain('staging');
+    expect($result->errors)->not->toBeEmpty();
+    expect($result->warnings)->toBe([]);
+    expect($result->errors[0])->toContain('staging');
+    expect($result->errors[0])->toContain('environments.staging');
 });
 
 it('passes when supervisors are defined', function () {
-    expect((new HorizonSupervisorsDefinedCheck())->check('staging', ['supervisor-1' => []], []))->toBe([]);
+    $result = (new HorizonSupervisorsDefinedCheck())->check('staging', ['supervisor-1' => []], []);
+
+    expect($result->errors)->toBe([]);
+    expect($result->warnings)->toBe([]);
 });

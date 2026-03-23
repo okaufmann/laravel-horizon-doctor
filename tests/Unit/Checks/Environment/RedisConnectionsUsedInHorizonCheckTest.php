@@ -15,10 +15,12 @@ it('reports redis connections that are not referenced by any horizon supervisor'
         ],
     ];
 
-    $messages = (new RedisConnectionsUsedInHorizonCheck())->check('local', $supervisors, $queueConnections);
+    $result = (new RedisConnectionsUsedInHorizonCheck())->check('local', $supervisors, $queueConnections);
 
-    expect($messages)->toHaveCount(1);
-    expect($messages[0])->toContain('redis-alt');
+    expect($result->errors)->toHaveCount(1);
+    expect($result->warnings)->toBe([]);
+    expect($result->errors[0])->toContain('redis-alt');
+    expect($result->errors[0])->toContain('environments.local');
 });
 
 it('passes when every redis connection is referenced', function () {
@@ -33,5 +35,8 @@ it('passes when every redis connection is referenced', function () {
         ],
     ];
 
-    expect((new RedisConnectionsUsedInHorizonCheck())->check('local', $supervisors, $queueConnections))->toBe([]);
+    $result = (new RedisConnectionsUsedInHorizonCheck())->check('local', $supervisors, $queueConnections);
+
+    expect($result->errors)->toBe([]);
+    expect($result->warnings)->toBe([]);
 });

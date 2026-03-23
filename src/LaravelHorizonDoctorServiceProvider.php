@@ -2,6 +2,7 @@
 
 namespace Okaufmann\LaravelHorizonDoctor;
 
+use Okaufmann\LaravelHorizonDoctor\Checks\Environment\HorizonQueuesDocumentedInQueuePhpCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Environment\HorizonSupervisorsDefinedCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Environment\RedisConnectionQueuesCoveredByHorizonCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Environment\RedisConnectionsUsedInHorizonCheck;
@@ -53,6 +54,7 @@ class LaravelHorizonDoctorServiceProvider extends PackageServiceProvider
                 ],
                 [
                     new RedisConnectionQueuesCoveredByHorizonCheck(),
+                    new HorizonQueuesDocumentedInQueuePhpCheck(),
                     new RedisConnectionsUsedInHorizonCheck(),
                 ],
             );

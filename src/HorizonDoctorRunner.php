@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\EnvironmentCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\GlobalCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\SupervisorCheck;
+use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 use Okaufmann\LaravelHorizonDoctor\Support\HorizonConfigMerger;
 
 final class HorizonDoctorRunner
@@ -27,6 +28,7 @@ final class HorizonDoctorRunner
     public function run(Command $command): int
     {
         $failed = false;
+        $hasWarnings = false;
 
         foreach ($this->globalChecks as $check) {
             foreach ($check->check() as $message) {
@@ -45,12 +47,22 @@ final class HorizonDoctorRunner
             $queueConnections = [];
         }
 
+        $strictWarnings = $this->strictWarnings($command);
+
         foreach (array_keys($environments) as $environment) {
             $command->info("Checking environment `{$environment}`");
 
             $merged = $this->merger->mergeSupervisorsForEnvironment((string) $environment);
 
-            $failed = $this->runEnvironmentChecks($command, $this->environmentChecksBeforeSupervisors, (string) $environment, $merged, $queueConnections) || $failed;
+            [$envFailed, $envWarnings] = $this->runEnvironmentChecks(
+                $command,
+                $this->environmentChecksBeforeSupervisors,
+                (string) $environment,
+                $merged,
+                $queueConnections
+            );
+            $failed = $envFailed || $failed;
+            $hasWarnings = $envWarnings || $hasWarnings;
 
             foreach ($merged as $supervisorKey => $supervisorConfig) {
                 if (! is_array($supervisorConfig)) {
@@ -80,36 +92,68 @@ final class HorizonDoctorRunner
             }
 
             $command->info('Running environment-level queue checks...');
-            $command->comment('Each Redis queue connection in config/queue.php is checked against Horizon supervisors that use the same connection name; queue names must match where you dispatch jobs.');
-            $failed = $this->runEnvironmentChecks($command, $this->environmentChecksAfterSupervisors, (string) $environment, $merged, $queueConnections) || $failed;
+            $command->comment('Redis connections in config/queue.php are compared to Horizon supervisors in config/horizon.php; queue names should line up with how you dispatch jobs. Warnings are consistency hints unless you pass --strict-warnings.');
+            [$envFailed, $envWarnings] = $this->runEnvironmentChecks(
+                $command,
+                $this->environmentChecksAfterSupervisors,
+                (string) $environment,
+                $merged,
+                $queueConnections
+            );
+            $failed = $envFailed || $failed;
+            $hasWarnings = $envWarnings || $hasWarnings;
             $command->comment('');
         }
 
+        if ($hasWarnings && $strictWarnings) {
+            $failed = true;
+        }
+
         return $failed ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    private function strictWarnings(Command $command): bool
+    {
+        if ($command->hasOption('strict-warnings') && (bool) $command->option('strict-warnings')) {
+            return true;
+        }
+
+        $config = config('horizon-doctor.strict_warnings');
+        if (is_bool($config)) {
+            return $config;
+        }
+
+        return false;
     }
 
     /**
      * @param  iterable<EnvironmentCheck>  $checks
      * @param  array<string, array<string, mixed>>  $merged
      * @param  array<string, array<string, mixed>>  $queueConnections
+     * @return array{0: bool, 1: bool}
      */
-    private function runEnvironmentChecks(Command $command, iterable $checks, string $environment, array $merged, array $queueConnections): bool
+    private function runEnvironmentChecks(Command $command, iterable $checks, string $environment, array $merged, array $queueConnections): array
     {
-        $messages = [];
+        $result = EnvironmentCheckResult::ok();
+
         foreach ($checks as $check) {
-            $messages = array_merge($messages, $check->check($environment, $merged, $queueConnections));
+            $result = $result->merge($check->check($environment, $merged, $queueConnections));
         }
 
-        if ($messages === []) {
+        if ($result->errors === [] && $result->warnings === []) {
             $command->info('- Everything looks good!');
 
-            return false;
+            return [false, false];
         }
 
-        foreach ($messages as $message) {
+        foreach ($result->errors as $message) {
             $command->error("- {$message}");
         }
 
-        return true;
+        foreach ($result->warnings as $message) {
+            $command->warn("- {$message}");
+        }
+
+        return [$result->errors !== [], $result->warnings !== []];
     }
 }

@@ -7,7 +7,7 @@ use Okaufmann\LaravelHorizonDoctor\HorizonDoctorRunner;
 
 class LaravelHorizonDoctorCommand extends Command
 {
-    public $signature = 'horizon:doctor';
+    public $signature = 'horizon:doctor {--strict-warnings : Treat documentation/consistency warnings as failures (non-zero exit)}';
 
     public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected.';
 

@@ -12,13 +12,13 @@ final class QueueConnectionExistsForSupervisorCheck implements SupervisorCheck
 
         if (! is_string($connection) || $connection === '') {
             return [
-                "Horizon supervisor `{$supervisorKey}` (environment `{$environment}`) has no valid `connection` in config/horizon.php.",
+                "Horizon supervisor `{$supervisorKey}` in environment `{$environment}` has no valid `connection` in `config/horizon.php` → `environments.{$environment}.{$supervisorKey}`. Fix: set `connection` to a key from `config/queue.php` → `connections`.",
             ];
         }
 
         if (! isset($queueConnections[$connection])) {
             return [
-                "Connection `{$connection}` referenced by Horizon supervisor `{$supervisorKey}` (environment `{$environment}`) does not exist in config/queue.php.",
+                "Supervisor `{$supervisorKey}` (environment `{$environment}`) uses `connection` `{$connection}` in `config/horizon.php` → `environments.{$environment}.{$supervisorKey}`, but that key is missing from `config/queue.php` → `connections`. Fix: add `connections.{$connection}` or point the supervisor at an existing connection name.",
             ];
         }
 

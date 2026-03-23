@@ -17,13 +17,16 @@ it('reports queue names that are not handled by any supervisor for that redis co
         ],
     ];
 
-    $messages = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', $supervisors, $queueConnections);
+    $result = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', $supervisors, $queueConnections);
 
-    expect($messages)->toHaveCount(1);
-    expect($messages[0])->toContain('emails');
-    expect($messages[0])->toContain('redis');
-    expect($messages[0])->toContain('config/queue.php');
-    expect($messages[0])->toContain('config/horizon.php');
+    expect($result->errors)->toHaveCount(1);
+    expect($result->warnings)->toBe([]);
+    expect($result->errors[0])->toContain('emails');
+    expect($result->errors[0])->toContain('redis');
+    expect($result->errors[0])->toContain('config/queue.php');
+    expect($result->errors[0])->toContain('connections.redis.queue');
+    expect($result->errors[0])->toContain('config/horizon.php');
+    expect($result->errors[0])->toContain('environments.local');
 });
 
 it('hints when the same queue is covered by horizon on a different redis queue connection', function () {
@@ -49,13 +52,15 @@ it('hints when the same queue is covered by horizon on a different redis queue c
         ],
     ];
 
-    $messages = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('production', $supervisors, $queueConnections);
+    $result = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('production', $supervisors, $queueConnections);
 
-    expect($messages)->toHaveCount(1);
-    expect($messages[0])->toContain('document-generation');
-    expect($messages[0])->toContain('redis-long-running');
-    expect($messages[0])->toContain('supervisor-long');
-    expect($messages[0])->toContain('dispatch');
+    expect($result->errors)->toHaveCount(1);
+    expect($result->errors[0])->toContain('document-generation');
+    expect($result->errors[0])->toContain('redis-long-running');
+    expect($result->errors[0])->toContain('supervisor-long');
+    expect($result->errors[0])->toContain('dispatched');
+    expect($result->errors[0])->toContain('connections.redis.queue');
+    expect($result->errors[0])->toContain('environments.production');
 });
 
 it('groups multiple uncovered queues on the same connection into one message', function () {
@@ -66,10 +71,11 @@ it('groups multiple uncovered queues on the same connection into one message', f
         ],
     ];
 
-    $messages = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', [], $queueConnections);
+    $result = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', [], $queueConnections);
 
-    expect($messages)->toHaveCount(1);
-    expect($messages[0])->toContain('`a`', '`b`', '`c`');
+    expect($result->errors)->toHaveCount(1);
+    expect($result->errors[0])->toContain('`a`', '`b`', '`c`');
+    expect($result->errors[0])->toContain('connections.redis.queue');
 });
 
 it('matches supervisors to the correct redis connection when multiple exist', function () {
@@ -95,7 +101,10 @@ it('matches supervisors to the correct redis connection when multiple exist', fu
         ],
     ];
 
-    expect((new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', $supervisors, $queueConnections))->toBe([]);
+    $result = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', $supervisors, $queueConnections);
+
+    expect($result->errors)->toBe([]);
+    expect($result->warnings)->toBe([]);
 });
 
 it('ignores non-redis connections', function () {
@@ -106,5 +115,8 @@ it('ignores non-redis connections', function () {
         ],
     ];
 
-    expect((new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', [], $queueConnections))->toBe([]);
+    $result = (new RedisConnectionQueuesCoveredByHorizonCheck())->check('local', [], $queueConnections);
+
+    expect($result->errors)->toBe([]);
+    expect($result->warnings)->toBe([]);
 });

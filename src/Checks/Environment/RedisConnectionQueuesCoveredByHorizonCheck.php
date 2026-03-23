@@ -4,13 +4,17 @@ namespace Okaufmann\LaravelHorizonDoctor\Checks\Environment;
 
 use Illuminate\Support\Collection;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\EnvironmentCheck;
+use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
+use Okaufmann\LaravelHorizonDoctor\Support\QueueConfigNormalizer;
 
 final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentCheck
 {
-    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): array
+    private const HORIZON_QUEUE_NOTE = 'Horizon uses each supervisor’s non-empty `queue` in `config/horizon.php`; if that list is empty, workers fall back to `connections.*.queue` in `config/queue.php` (default queue name / `RedisQueue` when no queue is passed).';
+
+    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): EnvironmentCheckResult
     {
-        $processedQueuesByConnection = $this->queuesHandledPerConnection($mergedHorizonSupervisors);
-        $placementsByQueue = $this->horizonPlacementsByQueueName($mergedHorizonSupervisors);
+        $processedQueuesByConnection = $this->queuesHandledPerConnection($mergedHorizonSupervisors, $queueConnections);
+        $placementsByQueue = $this->horizonPlacementsByQueueName($mergedHorizonSupervisors, $queueConnections);
 
         $redisConnections = Collection::make($queueConnections)
             ->filter(fn ($config) => is_array($config) && ($config['driver'] ?? null) === 'redis');
@@ -19,7 +23,11 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         $withoutHint = [];
 
         foreach ($redisConnections as $connectionName => $queueConfig) {
-            $handledQueues = Collection::make($queueConfig['queue'] ?? []);
+            if (! is_array($queueConfig)) {
+                continue;
+            }
+
+            $handledQueues = Collection::make(QueueConfigNormalizer::listedQueueNames($queueConfig));
             $horizonQueuesForConnection = $processedQueuesByConnection->get($connectionName, collect());
 
             foreach ($handledQueues as $queue) {
@@ -46,17 +54,50 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
             }
         }
 
-        return array_values(array_merge(
+        $errors = array_values(array_merge(
             $this->formatGroupedWithoutHint($withoutHint, $environment),
             $withHint
         ));
+
+        return EnvironmentCheckResult::errors($errors);
+    }
+
+    /**
+     * Effective queues Horizon processes per connection (supervisor `queue` when set, else connection default).
+     *
+     * @param  array<string, array<string, mixed>>  $mergedHorizonSupervisors
+     * @param  array<string, array<string, mixed>>  $queueConnections
+     * @return Collection<string, Collection<int, string>>
+     */
+    private function queuesHandledPerConnection(array $mergedHorizonSupervisors, array $queueConnections): Collection
+    {
+        $byConnection = Collection::make();
+
+        foreach ($mergedHorizonSupervisors as $supervisorConfig) {
+            if (! is_array($supervisorConfig)) {
+                continue;
+            }
+
+            $connection = $supervisorConfig['connection'] ?? null;
+            if (! is_string($connection) || $connection === '') {
+                continue;
+            }
+
+            $queues = QueueConfigNormalizer::effectiveHorizonQueuesForSupervisor($supervisorConfig, $queueConnections);
+
+            $existing = $byConnection->get($connection, collect());
+            $byConnection->put($connection, $existing->merge($queues)->unique()->sort(SORT_STRING)->values());
+        }
+
+        return $byConnection;
     }
 
     /**
      * @param  array<string, array<string, mixed>>  $mergedHorizonSupervisors
+     * @param  array<string, array<string, mixed>>  $queueConnections
      * @return Collection<string, Collection<int, array{connection: string, supervisor: string}>>
      */
-    private function horizonPlacementsByQueueName(array $mergedHorizonSupervisors): Collection
+    private function horizonPlacementsByQueueName(array $mergedHorizonSupervisors, array $queueConnections): Collection
     {
         $byQueue = Collection::make();
 
@@ -70,12 +111,8 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
                 continue;
             }
 
-            $queues = Collection::make($supervisorConfig['queue'] ?? [])->flatten()->filter();
+            $queues = QueueConfigNormalizer::effectiveHorizonQueuesForSupervisor($supervisorConfig, $queueConnections);
             foreach ($queues as $queue) {
-                if (! is_string($queue) || $queue === '') {
-                    continue;
-                }
-
                 $row = ['connection' => $connection, 'supervisor' => (string) $supervisorKey];
                 $existing = $byQueue->get($queue, collect());
                 $byQueue->put($queue, $existing->push($row));
@@ -108,7 +145,8 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
             }
 
             $list = $this->formatQueueList($queues);
-            $messages[] = "Queues {$list} are listed under queue connection `{$connectionName}` in config/queue.php, but no Horizon supervisor in environment `{$environment}` uses connection `{$connectionName}` with those queues. Add matching supervisors in config/horizon.php or adjust your queue connection configuration.";
+            $queueKey = "connections.{$connectionName}.queue";
+            $messages[] = "Queues {$list} appear under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no Horizon supervisor in `config/horizon.php` → `environments.{$environment}` uses connection `{$connectionName}` with those queues. Fix: add or adjust supervisors so one of them has `connection` `{$connectionName}` and `queue` includes {$list}, or remove those names from `{$queueKey}` if jobs should not use this connection. ".self::HORIZON_QUEUE_NOTE;
         }
 
         return $messages;
@@ -133,13 +171,18 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         }
 
         $where = implode('; ', $lines);
+        $queueKey = "connections.{$connectionName}.queue";
+        $horizonEnvKey = "environments.{$environment}";
 
-        return "Queue `{$queue}` is listed under queue connection `{$connectionName}` in config/queue.php, but no Horizon supervisor in environment `{$environment}` uses `{$connectionName}` for that queue. The same queue name is assigned in Horizon on {$where}. If you dispatch jobs using the `{$connectionName}` connection, add a supervisor with connection `{$connectionName}` and this queue; if you dispatch using another Redis queue connection, remove the queue from `connections.{$connectionName}.queue` in config/queue.php so it matches reality.";
+        return "Queue `{$queue}` is listed under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no supervisor in `config/horizon.php` → `{$horizonEnvKey}` uses connection `{$connectionName}` for that queue. Horizon runs `{$queue}` on {$where} instead — a common mistake is putting the name on the wrong Redis connection in `config/queue.php`. Fix: if jobs are dispatched with queue connection `{$connectionName}`, add a supervisor under `{$horizonEnvKey}` with `connection` `{$connectionName}` and `queue` containing `{$queue}`; if jobs actually use the other connection, remove `{$queue}` from `{$queueKey}` so `config/queue.php` matches how you dispatch. ".self::HORIZON_QUEUE_NOTE;
     }
 
     private function formatBareMismatchMessage(string $queue, string $connectionName, string $environment): string
     {
-        return "Queue `{$queue}` is listed under queue connection `{$connectionName}` in config/queue.php, but no Horizon supervisor in environment `{$environment}` uses connection `{$connectionName}` with that queue. Add a supervisor in config/horizon.php or remove the queue from that connection if it is unused.";
+        $queueKey = "connections.{$connectionName}.queue";
+        $horizonEnvKey = "environments.{$environment}";
+
+        return "Queue `{$queue}` is listed under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no supervisor in `config/horizon.php` → `{$horizonEnvKey}` uses connection `{$connectionName}` with `{$queue}`. Fix: add a supervisor under `{$horizonEnvKey}` with `connection` `{$connectionName}` and `queue` including `{$queue}`, or remove `{$queue}` from `{$queueKey}` if nothing should run there. ".self::HORIZON_QUEUE_NOTE;
     }
 
     /**
@@ -162,32 +205,5 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         $parts = array_map(fn (string $s) => "`{$s}`", $supervisors);
 
         return 'supervisors '.implode(', ', $parts);
-    }
-
-    /**
-     * @param  array<string, array<string, mixed>>  $mergedHorizonSupervisors
-     * @return Collection<string, Collection<int, string>>
-     */
-    private function queuesHandledPerConnection(array $mergedHorizonSupervisors): Collection
-    {
-        $byConnection = Collection::make();
-
-        foreach ($mergedHorizonSupervisors as $supervisorConfig) {
-            if (! is_array($supervisorConfig)) {
-                continue;
-            }
-
-            $connection = $supervisorConfig['connection'] ?? null;
-            if (! is_string($connection) || $connection === '') {
-                continue;
-            }
-
-            $queues = Collection::make($supervisorConfig['queue'] ?? [])->flatten()->filter();
-
-            $existing = $byConnection->get($connection, collect());
-            $byConnection->put($connection, $existing->merge($queues)->unique()->values());
-        }
-
-        return $byConnection;
     }
 }

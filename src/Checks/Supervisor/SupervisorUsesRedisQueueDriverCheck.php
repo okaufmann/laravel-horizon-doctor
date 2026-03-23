@@ -18,8 +18,10 @@ final class SupervisorUsesRedisQueueDriverCheck implements SupervisorCheck
             return [];
         }
 
+        $driverLabel = is_string($driver) ? $driver : 'unknown';
+
         return [
-            "Horizon supervisor `{$supervisorKey}` (environment `{$environment}`) uses queue connection `{$connection}` whose driver is `".(is_string($driver) ? $driver : 'unknown').'`, not `redis`. Horizon is intended for Redis queues; other drivers usually need `queue:work`, not Horizon.',
+            "Supervisor `{$supervisorKey}` (environment `{$environment}`) sets `connection` `{$connection}` in `config/horizon.php` → `environments.{$environment}.{$supervisorKey}`, but `config/queue.php` → `connections.{$connection}.driver` is `{$driverLabel}`, not `redis`. Horizon targets Redis queues; use a Redis connection or run `queue:work` for other drivers.",
         ];
     }
 }

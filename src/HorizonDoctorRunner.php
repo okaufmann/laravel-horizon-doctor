@@ -8,6 +8,7 @@ use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\GlobalCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\SupervisorCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 use Okaufmann\LaravelHorizonDoctor\Support\HorizonConfigMerger;
+use Okaufmann\LaravelHorizonDoctor\Support\RedisQueueHorizonOverview;
 
 final class HorizonDoctorRunner
 {
@@ -53,6 +54,10 @@ final class HorizonDoctorRunner
             $command->info("Checking environment `{$environment}`");
 
             $merged = $this->merger->mergeSupervisorsForEnvironment((string) $environment);
+
+            if ($this->shouldShowOverview($command)) {
+                $this->renderRedisQueueOverview($command, (string) $environment, $merged, $queueConnections);
+            }
 
             [$envFailed, $envWarnings] = $this->runEnvironmentChecks(
                 $command,
@@ -124,6 +129,54 @@ final class HorizonDoctorRunner
         }
 
         return false;
+    }
+
+    private function shouldShowOverview(Command $command): bool
+    {
+        if ($command->hasOption('no-overview') && (bool) $command->option('no-overview')) {
+            return false;
+        }
+
+        $config = config('horizon-doctor.show_overview');
+        if (is_bool($config)) {
+            return $config;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $merged
+     * @param  array<string, array<string, mixed>>  $queueConnections
+     */
+    private function renderRedisQueueOverview(Command $command, string $environment, array $merged, array $queueConnections): void
+    {
+        $rows = RedisQueueHorizonOverview::rows($merged, $queueConnections);
+
+        $command->info("Redis queue overview (environment `{$environment}`)");
+        $command->comment('Rows are queue names on each Redis connection: `config/queue.php` → `connections.{name}.queue` vs supervisors under `config/horizon.php` → `environments.'.$environment.'`.');
+
+        if ($rows === []) {
+            $hasRedis = collect($queueConnections)
+                ->filter(fn ($c) => is_array($c) && ($c['driver'] ?? null) === 'redis')
+                ->isNotEmpty();
+
+            if (! $hasRedis) {
+                $command->comment('No Redis queue connections in `config/queue.php` — nothing to map.');
+            } else {
+                $command->comment('No rows (no listed queues on Redis connections and no Horizon workers on Redis).');
+            }
+            $command->newLine();
+
+            return;
+        }
+
+        $command->table(
+            ['Queue', 'Connection', 'In queue.php', 'Horizon supervisors', 'Status'],
+            RedisQueueHorizonOverview::toTableBody($rows)
+        );
+        $command->comment('Status: OK = listed under this connection in queue.php and a Horizon supervisor runs it here. Warning = Horizon runs it here but the name is not listed under this connection. Error = listed here but no supervisor on this connection (or Horizon only uses another connection).');
+        $command->newLine();
     }
 
     /**

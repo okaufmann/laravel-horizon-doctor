@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
 use Okaufmann\LaravelHorizonDoctor\HorizonDoctorRunner;
 
 it('runs the horizon doctor command against valid config', function () {
@@ -103,4 +104,68 @@ it('fails with strict-warnings when queue documentation warnings are reported', 
     ]);
 
     $this->artisan('horizon:doctor', ['--strict-warnings' => true])->assertExitCode(1);
+});
+
+it('prints the Redis queue overview table by default', function () {
+    config([
+        'horizon.environments' => [
+            'local' => [
+                'supervisor-1' => [
+                    'maxProcesses' => 1,
+                ],
+            ],
+        ],
+        'horizon.defaults' => [
+            'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
+                'timeout' => 60,
+                'tries' => 1,
+            ],
+        ],
+        'queue.connections' => [
+            'redis' => [
+                'driver' => 'redis',
+                'connection' => 'default',
+                'queue' => 'default',
+                'retry_after' => 90,
+            ],
+        ],
+    ]);
+
+    Artisan::call('horizon:doctor');
+    expect(Artisan::output())->toContain('Redis queue overview');
+});
+
+it('hides the overview table with --no-overview', function () {
+    config([
+        'horizon.environments' => [
+            'local' => [
+                'supervisor-1' => [
+                    'maxProcesses' => 1,
+                ],
+            ],
+        ],
+        'horizon.defaults' => [
+            'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
+                'timeout' => 60,
+                'tries' => 1,
+            ],
+        ],
+        'queue.connections' => [
+            'redis' => [
+                'driver' => 'redis',
+                'connection' => 'default',
+                'queue' => 'default',
+                'retry_after' => 90,
+            ],
+        ],
+    ]);
+
+    Artisan::call('horizon:doctor', ['--no-overview' => true]);
+    expect(Artisan::output())->not->toContain('Redis queue overview');
 });

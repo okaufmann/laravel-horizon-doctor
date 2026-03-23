@@ -51,6 +51,7 @@ If `composer.json` and `artisan` live under a path such as `apps/api`:
 | `working-directory` | No | `.` | App root relative to the repository root. |
 | `minimum-php-version` | No | `8.4` | Minimum PHP `major.minor`; must be compatible with the doctor package version you use. |
 | `strict-warnings` | No | `false` | When `true`, passes `--strict-warnings` to `horizon:doctor` so consistency hints (for example queues Horizon runs that are not listed under the same connection in `config/queue.php`) fail the job. |
+| `no-overview` | No | `false` | When `true`, passes `--no-overview` to skip the Redis queue mapping table in the log output. |
 | `skip-prerequisites` | No | `false` | Set to `true` to skip local checks (PHP version, Composer, package install, `horizon:doctor` registration). Doctor still runs and can fail the job. |
 
 ## Outputs

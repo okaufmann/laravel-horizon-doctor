@@ -10,4 +10,9 @@ return [
     */
     'strict_warnings' => false,
 
+    /*
+    | When false, skip printing the per-environment Redis queue overview table (same as --no-overview).
+    */
+    'show_overview' => true,
+
 ];

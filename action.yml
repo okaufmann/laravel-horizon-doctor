@@ -31,6 +31,11 @@ inputs:
       consistency warnings fail the step (default: only hard errors fail).
     required: false
     default: "false"
+  no-overview:
+    description: >
+      When true, pass `--no-overview` to hide the Redis queue vs Horizon mapping table (smaller logs).
+    required: false
+    default: "false"
 
 outputs:
   result:
@@ -54,11 +59,15 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         STRICT_WARNINGS: ${{ inputs.strict-warnings }}
+        NO_OVERVIEW: ${{ inputs.no-overview }}
       run: |
         set +e
         FLAGS=(--no-interaction)
         if [[ "${STRICT_WARNINGS}" == "true" ]]; then
           FLAGS+=(--strict-warnings)
+        fi
+        if [[ "${NO_OVERVIEW}" == "true" ]]; then
+          FLAGS+=(--no-overview)
         fi
         php artisan horizon:doctor "${FLAGS[@]}"
         code=$?

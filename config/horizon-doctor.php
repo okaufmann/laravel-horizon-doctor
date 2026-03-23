@@ -18,6 +18,8 @@ return [
     /*
     | When true, print passing supervisors, the full overview table (including OK rows), section blurbs,
     | and long explanations on queue checks. CLI: use -v / -vv instead of this when you want detail once.
+    | If the environment variable HORIZON_DOCTOR_VERBOSE is set to a non-empty value, it overrides this
+    | and -v (useful in CI, for example the composite GitHub Action sets it from its `verbose` input).
     */
     'verbose' => false,
 

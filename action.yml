@@ -36,6 +36,12 @@ inputs:
       When true, pass `--no-overview` to hide the Redis queue vs Horizon mapping table (smaller logs).
     required: false
     default: "false"
+  verbose:
+    description: >
+      When true, set HORIZON_DOCTOR_VERBOSE so the doctor prints full output (same idea as `php artisan horizon:doctor -v`).
+      Default is off for smaller CI logs; this overrides `config/horizon-doctor.php` → `verbose` when set.
+    required: false
+    default: "false"
 
 outputs:
   result:
@@ -60,6 +66,7 @@ runs:
       env:
         STRICT_WARNINGS: ${{ inputs.strict-warnings }}
         NO_OVERVIEW: ${{ inputs.no-overview }}
+        HORIZON_DOCTOR_VERBOSE: ${{ inputs.verbose }}
       run: |
         set +e
         FLAGS=(--no-interaction)

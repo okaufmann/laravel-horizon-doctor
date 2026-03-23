@@ -159,6 +159,11 @@ final class HorizonDoctorRunner
 
     private function isVerbose(Command $command): bool
     {
+        $fromEnv = getenv('HORIZON_DOCTOR_VERBOSE');
+        if (is_string($fromEnv) && trim($fromEnv) !== '') {
+            return filter_var($fromEnv, FILTER_VALIDATE_BOOLEAN);
+        }
+
         if ($command->getOutput()->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
             return true;
         }

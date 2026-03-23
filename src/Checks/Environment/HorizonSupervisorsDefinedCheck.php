@@ -7,11 +7,11 @@ use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 
 final class HorizonSupervisorsDefinedCheck implements EnvironmentCheck
 {
-    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): EnvironmentCheckResult
+    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections, bool $verbose = false): EnvironmentCheckResult
     {
         if ($mergedHorizonSupervisors === []) {
             return EnvironmentCheckResult::errors([
-                "Environment `{$environment}` has no supervisors after merging `config/horizon.php` defaults into `environments.{$environment}`. Fix: add at least one supervisor under `config/horizon.php` → `environments.{$environment}`.",
+                "Environment `{$environment}` has no supervisors after merging Horizon defaults. Add at least one under `environments.{$environment}` in `config/horizon.php`.",
             ]);
         }
 

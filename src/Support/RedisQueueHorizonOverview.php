@@ -105,12 +105,12 @@ final class RedisQueueHorizonOverview
                 $other = array_values(array_diff($queueToHorizonConnections[$queue] ?? [], [$connectionName]));
                 sort($other, SORT_STRING);
                 if ($other !== []) {
-                    $status = 'Error: listed on this connection, but Horizon runs this queue on `'.implode('`, `', $other).'` only';
+                    $status = 'Error: wrong connection — Horizon uses `'.implode('`, `', $other).'` only';
                 } else {
-                    $status = 'Error: listed in queue.php but no Horizon supervisor on this connection';
+                    $status = 'Error: in queue.php but no supervisor on this connection';
                 }
             } else {
-                $status = 'Warning: Horizon runs this queue; not listed under connections.'.$connectionName.'.queue';
+                $status = 'Warning: not listed under connections.'.$connectionName.'.queue';
             }
 
             $rows[] = [

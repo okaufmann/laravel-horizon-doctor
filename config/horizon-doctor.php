@@ -15,4 +15,10 @@ return [
     */
     'show_overview' => true,
 
+    /*
+    | When true, print passing supervisors, the full overview table (including OK rows), section blurbs,
+    | and long explanations on queue checks. CLI: use -v / -vv instead of this when you want detail once.
+    */
+    'verbose' => false,
+
 ];

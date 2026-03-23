@@ -15,7 +15,7 @@ final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
 {
     private const NOTE = 'This is a consistency check: `config/queue.php` documents the default queue name(s) for each connection (and is the fallback when a supervisor’s `queue` in `config/horizon.php` is empty). Horizon still runs the supervisor `queue` list when it is non-empty.';
 
-    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): EnvironmentCheckResult
+    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections, bool $verbose = false): EnvironmentCheckResult
     {
         $redisConnections = Collection::make($queueConnections)
             ->filter(fn ($config) => is_array($config) && ($config['driver'] ?? null) === 'redis');
@@ -62,7 +62,7 @@ final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
             }
 
             ksort($missing, SORT_STRING);
-            $warnings[] = $this->formatWarning($environment, $connectionName, $missing, $documented);
+            $warnings[] = $this->formatWarning($environment, $connectionName, $missing, $documented, $verbose);
         }
 
         return EnvironmentCheckResult::warnings($warnings);
@@ -76,10 +76,10 @@ final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
         string $environment,
         string $connectionName,
         array $missingQueueToSupervisors,
-        array $documentedQueues
+        array $documentedQueues,
+        bool $verbose
     ): string {
         $queueKey = "connections.{$connectionName}.queue";
-        $horizonEnvKey = "environments.{$environment}";
         $documentedHuman = $this->formatDocumentedList($documentedQueues);
 
         $parts = [];
@@ -91,7 +91,9 @@ final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
 
         $missingHuman = implode('; ', $parts);
 
-        return "In environment `{$environment}`, Horizon supervises {$missingHuman} on Redis connection `{$connectionName}` (`config/horizon.php` → `{$horizonEnvKey}`), but `config/queue.php` → `{$queueKey}` does not list ".(count($missingQueueToSupervisors) === 1 ? 'that queue' : 'those queues')." (it currently lists {$documentedHuman}). Fix: add the missing queue name(s) to `{$queueKey}` so connection defaults and docs align with Horizon, or change the supervisor `queue` / `connection` in `{$horizonEnvKey}` if Horizon should not process them here. ".self::NOTE;
+        $short = "`{$connectionName}`: Horizon runs {$missingHuman} but `{$queueKey}` does not list ".(count($missingQueueToSupervisors) === 1 ? 'that queue' : 'those queues')." (documented: {$documentedHuman}). Add the names to `queue.php` or change supervisor `queue` / `connection` in `environments.{$environment}`.";
+
+        return $verbose ? $short.' '.self::NOTE : $short;
     }
 
     /**

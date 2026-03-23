@@ -8,7 +8,7 @@ use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 
 final class RedisConnectionsUsedInHorizonCheck implements EnvironmentCheck
 {
-    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): EnvironmentCheckResult
+    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections, bool $verbose = false): EnvironmentCheckResult
     {
         $redisConnectionNames = Collection::make($queueConnections)
             ->filter(fn ($queue) => is_array($queue) && ($queue['driver'] ?? null) === 'redis')
@@ -29,8 +29,11 @@ final class RedisConnectionsUsedInHorizonCheck implements EnvironmentCheck
 
         $list = $unused->sort()->values()->implode('`, `');
 
+        $short = "Redis connection(s) `{$list}` in `config/queue.php` are unused by any supervisor in `environments.{$environment}`. Add a supervisor or remove the connection.";
+        $long = ' (`config/horizon.php` → supervisor `connection`.)';
+
         return EnvironmentCheckResult::errors([
-            "Redis queue connection(s) `{$list}` are defined in `config/queue.php` under `connections.*` but none are referenced by any Horizon supervisor in environment `{$environment}` (`config/horizon.php` → `environments.{$environment}` → supervisor `connection`). Fix: add a supervisor that sets `connection` to each unused Redis connection, or remove/rename the unused connection in `config/queue.php` if it is obsolete.",
+            $verbose ? $short.$long : $short,
         ]);
     }
 }

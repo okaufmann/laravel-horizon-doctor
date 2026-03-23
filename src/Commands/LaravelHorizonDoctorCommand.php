@@ -11,7 +11,7 @@ class LaravelHorizonDoctorCommand extends Command
                             {--strict-warnings : Treat documentation/consistency warnings as failures (non-zero exit)}
                             {--no-overview : Hide the Redis queue vs Horizon mapping table}';
 
-    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected.';
+    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected. Use -v for full output (all rows, passing checks, long hints).';
 
     public function handle(HorizonDoctorRunner $runner): int
     {

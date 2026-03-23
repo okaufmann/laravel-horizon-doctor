@@ -23,9 +23,7 @@ it('reports queue names that are not handled by any supervisor for that redis co
     expect($result->warnings)->toBe([]);
     expect($result->errors[0])->toContain('emails');
     expect($result->errors[0])->toContain('redis');
-    expect($result->errors[0])->toContain('config/queue.php');
     expect($result->errors[0])->toContain('connections.redis.queue');
-    expect($result->errors[0])->toContain('config/horizon.php');
     expect($result->errors[0])->toContain('environments.local');
 });
 

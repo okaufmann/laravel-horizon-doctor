@@ -11,7 +11,7 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
 {
     private const HORIZON_QUEUE_NOTE = 'Horizon uses each supervisor’s non-empty `queue` in `config/horizon.php`; if that list is empty, workers fall back to `connections.*.queue` in `config/queue.php` (default queue name / `RedisQueue` when no queue is passed).';
 
-    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections): EnvironmentCheckResult
+    public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections, bool $verbose = false): EnvironmentCheckResult
     {
         $processedQueuesByConnection = $this->queuesHandledPerConnection($mergedHorizonSupervisors, $queueConnections);
         $placementsByQueue = $this->horizonPlacementsByQueueName($mergedHorizonSupervisors, $queueConnections);
@@ -46,7 +46,8 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
                         $queue,
                         $connectionName,
                         $environment,
-                        $otherPlacements
+                        $otherPlacements,
+                        $verbose
                     );
                 } else {
                     $withoutHint[$connectionName][] = $queue;
@@ -55,7 +56,7 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         }
 
         $errors = array_values(array_merge(
-            $this->formatGroupedWithoutHint($withoutHint, $environment),
+            $this->formatGroupedWithoutHint($withoutHint, $environment, $verbose),
             $withHint
         ));
 
@@ -126,7 +127,7 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
      * @param  array<string, list<string>>  $withoutHint
      * @return list<string>
      */
-    private function formatGroupedWithoutHint(array $withoutHint, string $environment): array
+    private function formatGroupedWithoutHint(array $withoutHint, string $environment, bool $verbose): array
     {
         $messages = [];
 
@@ -139,14 +140,15 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
             }
 
             if (count($queues) === 1) {
-                $messages[] = $this->formatBareMismatchMessage($queues[0], $connectionName, $environment);
+                $messages[] = $this->formatBareMismatchMessage($queues[0], $connectionName, $environment, $verbose);
 
                 continue;
             }
 
             $list = $this->formatQueueList($queues);
             $queueKey = "connections.{$connectionName}.queue";
-            $messages[] = "Queues {$list} appear under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no Horizon supervisor in `config/horizon.php` → `environments.{$environment}` uses connection `{$connectionName}` with those queues. Fix: add or adjust supervisors so one of them has `connection` `{$connectionName}` and `queue` includes {$list}, or remove those names from `{$queueKey}` if jobs should not use this connection. ".self::HORIZON_QUEUE_NOTE;
+            $short = "Queues {$list} are on `{$queueKey}` but no supervisor uses connection `{$connectionName}` in `environments.{$environment}`. Add supervisors or remove those names.";
+            $messages[] = $verbose ? $short.' '.self::HORIZON_QUEUE_NOTE : $short;
         }
 
         return $messages;
@@ -159,7 +161,8 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         string $queue,
         string $connectionName,
         string $environment,
-        Collection $otherPlacements
+        Collection $otherPlacements,
+        bool $verbose
     ): string {
         $lines = [];
         $byConn = $otherPlacements->groupBy('connection');
@@ -167,22 +170,25 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         foreach ($byConn as $horizonConnection => $rows) {
             $supervisors = $rows->pluck('supervisor')->unique()->sort()->values()->all();
             $supList = $this->formatSupervisorList($supervisors);
-            $lines[] = "connection `{$horizonConnection}` ({$supList})";
+            $lines[] = "`{$horizonConnection}` ({$supList})";
         }
 
         $where = implode('; ', $lines);
         $queueKey = "connections.{$connectionName}.queue";
-        $horizonEnvKey = "environments.{$environment}";
 
-        return "Queue `{$queue}` is listed under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no supervisor in `config/horizon.php` → `{$horizonEnvKey}` uses connection `{$connectionName}` for that queue. Horizon runs `{$queue}` on {$where} instead — a common mistake is putting the name on the wrong Redis connection in `config/queue.php`. Fix: if jobs are dispatched with queue connection `{$connectionName}`, add a supervisor under `{$horizonEnvKey}` with `connection` `{$connectionName}` and `queue` containing `{$queue}`; if jobs actually use the other connection, remove `{$queue}` from `{$queueKey}` so `config/queue.php` matches how you dispatch. ".self::HORIZON_QUEUE_NOTE;
+        $short = "Queue `{$queue}` is on `{$queueKey}` but Horizon runs it on {$where}. Align `config/queue.php` with how jobs are dispatched, or add a supervisor on `{$connectionName}` in `environments.{$environment}`.";
+        $long = " Full detail: no supervisor in `environments.{$environment}` uses `connection` `{$connectionName}` for this queue; jobs dispatched on `{$connectionName}` would not match Horizon’s placement. ".self::HORIZON_QUEUE_NOTE;
+
+        return $verbose ? $short.$long : $short;
     }
 
-    private function formatBareMismatchMessage(string $queue, string $connectionName, string $environment): string
+    private function formatBareMismatchMessage(string $queue, string $connectionName, string $environment, bool $verbose): string
     {
         $queueKey = "connections.{$connectionName}.queue";
-        $horizonEnvKey = "environments.{$environment}";
+        $short = "Queue `{$queue}` is on `{$queueKey}` but no supervisor covers it on connection `{$connectionName}` in `environments.{$environment}`. Add a supervisor or remove the queue name.";
+        $long = ' '.self::HORIZON_QUEUE_NOTE;
 
-        return "Queue `{$queue}` is listed under `config/queue.php` → `{$queueKey}`, but in environment `{$environment}` no supervisor in `config/horizon.php` → `{$horizonEnvKey}` uses connection `{$connectionName}` with `{$queue}`. Fix: add a supervisor under `{$horizonEnvKey}` with `connection` `{$connectionName}` and `queue` including `{$queue}`, or remove `{$queue}` from `{$queueKey}` if nothing should run there. ".self::HORIZON_QUEUE_NOTE;
+        return $verbose ? $short.$long : $short;
     }
 
     /**

@@ -21,6 +21,8 @@ composer require okaufmann/laravel-horizon-doctor
 php artisan horizon:doctor
 ```
 
+Errors block the exit code by default. Some **warnings** (for example Horizon supervises a queue that is not listed under the same connection in `config/queue.php`) print as warnings only. Use `php artisan horizon:doctor --strict-warnings` or `strict_warnings` in `config/horizon-doctor.php` to fail on those as well. The [GitHub Action](action/README.md) exposes the same behavior via the `strict-warnings` input.
+
 ## GitHub Action
 
 Run the same checks in CI with the [composite action](https://docs.github.com/en/actions/creating-actions/creating-a-composite-action) published from this repository:

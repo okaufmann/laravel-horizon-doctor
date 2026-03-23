@@ -50,6 +50,7 @@ If `composer.json` and `artisan` live under a path such as `apps/api`:
 | --- | --- | --- | --- |
 | `working-directory` | No | `.` | App root relative to the repository root. |
 | `minimum-php-version` | No | `8.4` | Minimum PHP `major.minor`; must be compatible with the doctor package version you use. |
+| `strict-warnings` | No | `false` | When `true`, passes `--strict-warnings` to `horizon:doctor` so consistency hints (for example queues Horizon runs that are not listed under the same connection in `config/queue.php`) fail the job. |
 | `skip-prerequisites` | No | `false` | Set to `true` to skip local checks (PHP version, Composer, package install, `horizon:doctor` registration). Doctor still runs and can fail the job. |
 
 ## Outputs
@@ -65,6 +66,10 @@ If `composer.json` and `artisan` live under a path such as `apps/api`:
 - `okaufmann/laravel-horizon-doctor` appears in `composer.json` and is installed (`composer show`).
 - `laravel/horizon` is installed.
 - `php artisan help horizon:doctor` succeeds (command is registered).
+
+## Doctor warnings vs errors
+
+`horizon:doctor` can emit **warnings** (for example when `config/horizon.php` supervises a queue name that is not listed under the same Redis connection in `config/queue.php`). By default the command still exits `0` so CI stays strict on misconfiguration **errors** only. Use the action input `strict-warnings: true` or run `php artisan horizon:doctor --strict-warnings` locally when you want warnings to fail the build. You can also set `strict_warnings` in the published `config/horizon-doctor.php`.
 
 ## Publishing on the GitHub Marketplace
 

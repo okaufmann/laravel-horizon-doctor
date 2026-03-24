@@ -52,7 +52,9 @@ If `composer.json` and `artisan` live under a path such as `apps/api`:
 | `minimum-php-version` | No | `8.4` | Minimum PHP `major.minor`; must be compatible with the doctor package version you use. |
 | `strict-warnings` | No | `false` | When `true`, passes `--strict-warnings` to `horizon:doctor` so consistency hints (for example queues Horizon runs that are not listed under the same connection in `config/queue.php`) fail the job. |
 | `no-overview` | No | `false` | When `true`, passes `--no-overview` to skip the Redis queue mapping table in the log output. |
-| `verbose` | No | `false` | When `true`, sets `HORIZON_DOCTOR_VERBOSE` so the doctor prints the full table, passing checks, and long hints. Default stays **off** to keep action logs small (this overrides `config/horizon-doctor.php` → `verbose`). |
+| `verbose` | No | `false` | When `true`, passes `-v` to `horizon:doctor` so the step prints the full table, passing checks, and long hints. Default stays **off** to keep action logs small. |
+| `scan-queued-classes` | No | *(empty)* | When `true`, passes `--scan-jobs`. When `false`, passes `--no-scan-jobs`. When empty, uses `scan_queued_classes` from `config/horizon-doctor.php` (default package behavior: off). |
+| `strict-job-timeouts` | No | *(empty)* | When `true` / `false`, passes `--strict-job-timeouts` / `--no-strict-job-timeouts` (only applies if scanning runs). When empty, uses `strict_job_timeouts` from config. |
 | `skip-prerequisites` | No | `false` | Set to `true` to skip local checks (PHP version, Composer, package install, `horizon:doctor` registration). Doctor still runs and can fail the job. |
 
 ## Outputs

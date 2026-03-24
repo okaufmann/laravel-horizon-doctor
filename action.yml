@@ -38,10 +38,22 @@ inputs:
     default: "false"
   verbose:
     description: >
-      When true, set HORIZON_DOCTOR_VERBOSE so the doctor prints full output (same idea as `php artisan horizon:doctor -v`).
-      Default is off for smaller CI logs; this overrides `config/horizon-doctor.php` → `verbose` when set.
+      When true, passes `-v` to `horizon:doctor` for full output (overview table, passing checks, long hints).
+      Default is off for smaller CI logs.
     required: false
     default: "false"
+  scan-queued-classes:
+    description: >
+      When `true`, passes `--scan-jobs`. When `false`, passes `--no-scan-jobs` (disables scanning even if enabled in config).
+      When empty (default), uses `scan_queued_classes` from your published `config/horizon-doctor.php` / package defaults.
+    required: false
+    default: ""
+  strict-job-timeouts:
+    description: >
+      When `true`, passes `--strict-job-timeouts` (scan must be on). When `false`, passes `--no-strict-job-timeouts`.
+      When empty (default), uses `strict_job_timeouts` from config. Only affects the queued-class scan.
+    required: false
+    default: ""
 
 outputs:
   result:
@@ -66,15 +78,30 @@ runs:
       env:
         STRICT_WARNINGS: ${{ inputs.strict-warnings }}
         NO_OVERVIEW: ${{ inputs.no-overview }}
-        HORIZON_DOCTOR_VERBOSE: ${{ inputs.verbose }}
+        VERBOSE: ${{ inputs.verbose }}
       run: |
         set +e
         FLAGS=(--no-interaction)
+        if [[ "${VERBOSE}" == "true" ]]; then
+          FLAGS+=(-v)
+        fi
         if [[ "${STRICT_WARNINGS}" == "true" ]]; then
           FLAGS+=(--strict-warnings)
         fi
         if [[ "${NO_OVERVIEW}" == "true" ]]; then
           FLAGS+=(--no-overview)
+        fi
+        SCAN="${{ inputs.scan-queued-classes }}"
+        if [[ "$SCAN" == "true" ]]; then
+          FLAGS+=(--scan-jobs)
+        elif [[ "$SCAN" == "false" ]]; then
+          FLAGS+=(--no-scan-jobs)
+        fi
+        SJ="${{ inputs.strict-job-timeouts }}"
+        if [[ "$SJ" == "true" ]]; then
+          FLAGS+=(--strict-job-timeouts)
+        elif [[ "$SJ" == "false" ]]; then
+          FLAGS+=(--no-strict-job-timeouts)
         fi
         php artisan horizon:doctor "${FLAGS[@]}"
         code=$?

@@ -67,6 +67,40 @@ it('runs with --scan-jobs when no queued classes are found under default paths',
     $this->artisan('horizon:doctor', ['--scan-jobs' => true])->assertExitCode(0);
 });
 
+it('accepts strict job timeout CLI overrides with --scan-jobs', function () {
+    config([
+        'horizon.environments' => [
+            'local' => [
+                'supervisor-1' => [
+                    'maxProcesses' => 1,
+                ],
+            ],
+        ],
+        'horizon.defaults' => [
+            'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
+                'timeout' => 60,
+                'tries' => 1,
+            ],
+        ],
+        'queue.connections' => [
+            'redis' => [
+                'driver' => 'redis',
+                'connection' => 'default',
+                'queue' => 'default',
+                'retry_after' => 90,
+            ],
+        ],
+    ]);
+
+    $this->artisan('horizon:doctor', [
+        '--scan-jobs' => true,
+        '--no-strict-job-timeouts' => true,
+    ])->assertExitCode(0);
+});
+
 it('registers the horizon doctor runner in the container', function () {
     expect(app(HorizonDoctorRunner::class))->toBeInstanceOf(HorizonDoctorRunner::class);
 });
@@ -175,89 +209,38 @@ it('prints the full Redis queue overview when using -v and everything matches', 
     expect($out->fetch())->toContain('Redis queue overview');
 });
 
-it('keeps compact output when HORIZON_DOCTOR_VERBOSE is false even if config verbose is true and output is verbose', function () {
-    try {
-        putenv('HORIZON_DOCTOR_VERBOSE=false');
-        $_ENV['HORIZON_DOCTOR_VERBOSE'] = 'false';
-
-        config([
-            'horizon-doctor.verbose' => true,
-            'horizon.environments' => [
-                'local' => [
-                    'supervisor-1' => [
-                        'maxProcesses' => 1,
-                    ],
-                ],
-            ],
-            'horizon.defaults' => [
+it('prints the full Redis queue overview when verbose is true in config without -v', function () {
+    config([
+        'horizon-doctor.verbose' => true,
+        'horizon.environments' => [
+            'local' => [
                 'supervisor-1' => [
-                    'connection' => 'redis',
-                    'queue' => ['default'],
-                    'balance' => 'auto',
-                    'timeout' => 60,
-                    'tries' => 1,
+                    'maxProcesses' => 1,
                 ],
             ],
-            'queue.connections' => [
-                'redis' => [
-                    'driver' => 'redis',
-                    'connection' => 'default',
-                    'queue' => 'default',
-                    'retry_after' => 90,
-                ],
+        ],
+        'horizon.defaults' => [
+            'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
+                'timeout' => 60,
+                'tries' => 1,
             ],
-        ]);
+        ],
+        'queue.connections' => [
+            'redis' => [
+                'driver' => 'redis',
+                'connection' => 'default',
+                'queue' => 'default',
+                'retry_after' => 90,
+            ],
+        ],
+    ]);
 
-        $out = new BufferedOutput();
-        $out->setVerbosity(OutputInterface::VERBOSITY_VERBOSE);
-        Artisan::call('horizon:doctor', [], $out);
-        expect($out->fetch())->not->toContain('Redis queue overview');
-    } finally {
-        putenv('HORIZON_DOCTOR_VERBOSE');
-        unset($_ENV['HORIZON_DOCTOR_VERBOSE']);
-    }
-});
-
-it('prints the full Redis queue overview when HORIZON_DOCTOR_VERBOSE is true without raising output verbosity', function () {
-    try {
-        putenv('HORIZON_DOCTOR_VERBOSE=true');
-        $_ENV['HORIZON_DOCTOR_VERBOSE'] = 'true';
-
-        config([
-            'horizon-doctor.verbose' => false,
-            'horizon.environments' => [
-                'local' => [
-                    'supervisor-1' => [
-                        'maxProcesses' => 1,
-                    ],
-                ],
-            ],
-            'horizon.defaults' => [
-                'supervisor-1' => [
-                    'connection' => 'redis',
-                    'queue' => ['default'],
-                    'balance' => 'auto',
-                    'timeout' => 60,
-                    'tries' => 1,
-                ],
-            ],
-            'queue.connections' => [
-                'redis' => [
-                    'driver' => 'redis',
-                    'connection' => 'default',
-                    'queue' => 'default',
-                    'retry_after' => 90,
-                ],
-            ],
-        ]);
-
-        $out = new BufferedOutput();
-        Artisan::call('horizon:doctor', [], $out);
-        expect($out->fetch())->toContain('Redis queue overview');
-    } finally {
-        putenv('HORIZON_DOCTOR_VERBOSE');
-        unset($_ENV['HORIZON_DOCTOR_VERBOSE']);
-    }
+    $out = new BufferedOutput();
+    Artisan::call('horizon:doctor', [], $out);
+    expect($out->fetch())->toContain('Redis queue overview');
 });
 
 it('omits the overview table when every queue row is OK', function () {

@@ -11,9 +11,11 @@ class LaravelHorizonDoctorCommand extends Command
                             {--strict-warnings : Treat documentation/consistency warnings as failures (non-zero exit)}
                             {--no-overview : Hide the Redis queue vs Horizon mapping table}
                             {--scan-jobs : Scan queued classes (app/Jobs, Listeners, Mail, …) for timeout/queue footguns}
-                            {--no-scan-jobs : Skip queued-class scan even if enabled in config}';
+                            {--no-scan-jobs : Skip queued-class scan even if enabled in config}
+                            {--strict-job-timeouts : When scanning, treat timeout vs retry_after issues as errors (overrides config)}
+                            {--no-strict-job-timeouts : When scanning, treat those as warnings only (overrides config)}';
 
-    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected. Use -v for full output (all rows, passing checks, long hints).';
+    public $description = 'Checks your Horizon config against the Laravel queue config to ensure everything is configured as expected. Use -v or `verbose` in config/horizon-doctor.php for full output (all rows, passing checks, long hints).';
 
     public function handle(HorizonDoctorRunner $runner): int
     {

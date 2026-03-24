@@ -50,12 +50,11 @@ final class HorizonDoctorRunner
         }
 
         if ($this->shouldScanQueuedClasses($command)) {
-            $horizonDoctorConfig = config('horizon-doctor', []);
-            if (! is_array($horizonDoctorConfig)) {
-                $horizonDoctorConfig = [];
-            }
-
-            $scanResult = $this->queuedClassScanRunner->discoverAndRunRules(base_path(), $horizonDoctorConfig, $queueConnections);
+            $scanResult = $this->queuedClassScanRunner->discoverAndRunRules(
+                base_path(),
+                $this->horizonDoctorScanConfig($command),
+                $queueConnections
+            );
             foreach ($scanResult->errors as $message) {
                 $command->error($message);
                 $failed = true;
@@ -220,11 +219,6 @@ final class HorizonDoctorRunner
 
     private function isVerbose(Command $command): bool
     {
-        $fromEnv = getenv('HORIZON_DOCTOR_VERBOSE');
-        if (is_string($fromEnv) && trim($fromEnv) !== '') {
-            return filter_var($fromEnv, FILTER_VALIDATE_BOOLEAN);
-        }
-
         if ($command->getOutput()->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
             return true;
         }
@@ -326,5 +320,26 @@ final class HorizonDoctorRunner
         }
 
         return [$result->errors !== [], $result->warnings !== []];
+    }
+
+    /**
+     * Merged horizon-doctor options for the queued-class scan (config and CLI overrides).
+     *
+     * @return array<string, mixed>
+     */
+    private function horizonDoctorScanConfig(Command $command): array
+    {
+        $base = config('horizon-doctor', []);
+        if (! is_array($base)) {
+            $base = [];
+        }
+
+        if ($command->hasOption('no-strict-job-timeouts') && (bool) $command->option('no-strict-job-timeouts')) {
+            $base['strict_job_timeouts'] = false;
+        } elseif ($command->hasOption('strict-job-timeouts') && (bool) $command->option('strict-job-timeouts')) {
+            $base['strict_job_timeouts'] = true;
+        }
+
+        return $base;
     }
 }

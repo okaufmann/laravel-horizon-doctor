@@ -61,7 +61,7 @@ Checks performed when scanning:
 - **Queued listeners** — warns if `onQueue()` is only used from `__construct()`; prefer `#[Queue]`, `public $queue`, or the queue at dispatch time.
 - **Horizon vs declared queue** — after a scan, each environment section can warn if a class targets a Redis queue/connection that no supervisor handles there.
 
-The published composite action does not pass `--scan-jobs`; enable scanning via config or run `horizon:doctor --scan-jobs` in your own workflow step if you want it in CI.
+The published composite action can enable scanning with the `scan-queued-classes` and `strict-job-timeouts` inputs (see [action/README.md](action/README.md)); configure paths and exclude patterns in published `config/horizon-doctor.php`, or run `php artisan horizon:doctor --scan-jobs` in a custom step.
 
 ## GitHub Action
 

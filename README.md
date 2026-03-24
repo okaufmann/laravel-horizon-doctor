@@ -9,11 +9,31 @@ Checks your Horizon config against the Laravel queue config to ensure everything
 
 ## Installation
 
-You can install the package via composer:
+### Requirements
+
+- PHP 8.4+
+- Laravel 12 or 13 (`illuminate/support` is pulled in by your app)
+- [Laravel Horizon](https://laravel.com/docs/horizon) (`laravel/horizon`)
+
+### Install
+
+Require the package with [Composer](https://getcomposer.org/):
 
 ```bash
 composer require okaufmann/laravel-horizon-doctor
 ```
+
+The service provider and `LaravelHorizonDoctor` facade are [auto-discovered](https://laravel.com/docs/packages#package-discovery); you do not need to register them manually.
+
+### Publish configuration (optional)
+
+The package works without publishing: it merges the default [`config/horizon-doctor.php`](config/horizon-doctor.php) from the package. Run publish when you want to customize options in your app:
+
+```bash
+php artisan vendor:publish --tag=laravel-horizon-doctor-config
+```
+
+This creates `config/horizon-doctor.php`. The publish tag follows the convention used by [Spatie Laravel Package Tools](https://github.com/spatie/laravel-package-tools) (`{package-name}-config`).
 
 ## Usage
 

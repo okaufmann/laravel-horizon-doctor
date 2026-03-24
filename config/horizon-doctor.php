@@ -23,4 +23,30 @@ return [
     */
     'verbose' => false,
 
+    /*
+    | When true, scan PHP classes under the paths below for queued (ShouldQueue) issues.
+    | CLI: `--scan-jobs` / `--no-scan-jobs` override this for a single run.
+    */
+    'scan_queued_classes' => false,
+
+    /*
+    | Directories relative to the application base path (used when scanning is enabled).
+    */
+    'queued_class_paths' => [
+        'app/Jobs',
+        'app/Listeners',
+        'app/Mail',
+    ],
+
+    /*
+    | Optional regex patterns passed to Symfony Finder::notPath() (e.g. '#^tests/#') to skip files.
+    */
+    'queued_class_exclude_patterns' => [],
+
+    /*
+    | When true, job timeouts that violate Redis `retry_after` on the scanned connection are errors;
+    | when false, they are warnings only.
+    */
+    'strict_job_timeouts' => true,
+
 ];

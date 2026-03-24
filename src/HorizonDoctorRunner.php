@@ -8,6 +8,7 @@ use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\GlobalCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\Contracts\SupervisorCheck;
 use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 use Okaufmann\LaravelHorizonDoctor\Support\HorizonConfigMerger;
+use Okaufmann\LaravelHorizonDoctor\Support\QueuedClassScanCache;
 use Okaufmann\LaravelHorizonDoctor\Support\RedisQueueHorizonOverview;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -25,12 +26,16 @@ final class HorizonDoctorRunner
         private readonly iterable $environmentChecksBeforeSupervisors,
         private readonly iterable $supervisorChecks,
         private readonly iterable $environmentChecksAfterSupervisors,
+        private readonly QueuedClassScanRunner $queuedClassScanRunner,
+        private readonly QueuedClassScanCache $queuedClassScanCache,
     ) {}
 
     public function run(Command $command): int
     {
         $failed = false;
         $hasWarnings = false;
+
+        $this->queuedClassScanCache->reset();
 
         foreach ($this->globalChecks as $check) {
             foreach ($check->check() as $message) {
@@ -39,17 +44,38 @@ final class HorizonDoctorRunner
             }
         }
 
-        $environments = config('horizon.environments');
-        if (! is_array($environments) || $environments === []) {
-            return $failed ? Command::FAILURE : Command::SUCCESS;
-        }
-
         $queueConnections = config('queue.connections', []);
         if (! is_array($queueConnections)) {
             $queueConnections = [];
         }
 
+        if ($this->shouldScanQueuedClasses($command)) {
+            $horizonDoctorConfig = config('horizon-doctor', []);
+            if (! is_array($horizonDoctorConfig)) {
+                $horizonDoctorConfig = [];
+            }
+
+            $scanResult = $this->queuedClassScanRunner->discoverAndRunRules(base_path(), $horizonDoctorConfig, $queueConnections);
+            foreach ($scanResult->errors as $message) {
+                $command->error($message);
+                $failed = true;
+            }
+            foreach ($scanResult->warnings as $message) {
+                $command->warn($message);
+                $hasWarnings = true;
+            }
+        }
+
         $strictWarnings = $this->strictWarnings($command);
+
+        $environments = config('horizon.environments');
+        if (! is_array($environments) || $environments === []) {
+            if ($hasWarnings && $strictWarnings) {
+                $failed = true;
+            }
+
+            return $failed ? Command::FAILURE : Command::SUCCESS;
+        }
         $verbose = $this->isVerbose($command);
 
         foreach (array_keys($environments) as $environment) {
@@ -153,6 +179,24 @@ final class HorizonDoctorRunner
         }
 
         $config = config('horizon-doctor.strict_warnings');
+        if (is_bool($config)) {
+            return $config;
+        }
+
+        return false;
+    }
+
+    private function shouldScanQueuedClasses(Command $command): bool
+    {
+        if ($command->hasOption('no-scan-jobs') && (bool) $command->option('no-scan-jobs')) {
+            return false;
+        }
+
+        if ($command->hasOption('scan-jobs') && (bool) $command->option('scan-jobs')) {
+            return true;
+        }
+
+        $config = config('horizon-doctor.scan_queued_classes');
         if (is_bool($config)) {
             return $config;
         }

@@ -38,16 +38,16 @@ These apply to the **queue backend**, not Horizon’s meta Redis (`horizon.use`)
 
 ## `config/horizon.php` — supervisors (`defaults` + `environments.{env}.*`)
 
-Merged per environment; keys are the same shape as `queue:work` / Horizon’s `SupervisorOptions` (Horizon maps `tries` → worker `maxTries`, `processes` → `maxProcesses`).
+Merged per environment; keys match what Horizon passes to `horizon:work` (same flags as `queue:work`). Horizon’s `ProvisioningPlan` maps config `tries` → worker `maxTries`, `processes` → `maxProcesses`.
 
-### Worker process (what each `queue:work` child gets)
+### Worker process (each `horizon:work` child)
 
 | Key | Unit | Role |
 |-----|------|------|
 | `connection` | name | Key under `config/queue.php` → `connections`. |
 | `queue` | name(s) | String or **array** of queue names (Horizon joins with `,` for the worker). |
-| `balance` | `false` / `'simple'` / `'auto'` | Queue balancing across names in this supervisor. |
-| `autoScalingStrategy` | `'time'` / `'size'` | How `'auto'` scales (time-to-clear vs job count). |
+| `balance` | `false` / `'simple'` / `'auto'` | `false` = one worker pool for all listed queues; `'simple'` / `'auto'` = separate pools per queue with balancing (see [Horizon balancing](https://laravel.com/docs/horizon#balancing)). |
+| `autoScalingStrategy` | `'time'` / `'size'` | Only changes behavior when `balance` is `'auto'`: scale by estimated **time-to-clear** vs **share of pending jobs** (`SupervisorOptions::autoScaleByNumberOfJobs()`). |
 | `maxProcesses` | count | Max worker processes (`processes` is an alias in config). |
 | `minProcesses` | count | Floor when auto-scaling (`>= 1`). |
 | `maxTime` | **seconds** | Worker exits after this lifetime; `0` = unlimited. |
@@ -61,12 +61,12 @@ Merged per environment; keys are the same shape as `queue:work` / Horizon’s `S
 | `backoff` | **seconds** or list | Delay before retry after exception; array becomes comma-separated for the worker. |
 | `force` | bool | Run workers while app is in maintenance mode. |
 
-### Auto-scale tuning (only relevant when `balance` is not `false`)
+### Auto-scale tuning (Horizon supervisor loop)
 
 | Key | Unit | Role |
 |-----|------|------|
-| `balanceCooldown` | **seconds** | Minimum gap between scaling adjustments. |
-| `balanceMaxShift` | count | Max processes added/removed per scaling step. |
+| `balanceCooldown` | **seconds** | Minimum time between runs of Horizon’s auto-scale pass (`Supervisor::autoScale` → `AutoScaler::scale`). |
+| `balanceMaxShift` | count | Max worker processes to **add or remove in one step** toward the target (`AutoScaler::scalePool`). |
 
 ### Horizon app-level (same file, not per supervisor)
 
@@ -84,10 +84,24 @@ Merged per environment; keys are the same shape as `queue:work` / Horizon’s `S
 | **Job** `$timeout` | Max time Laravel asks the worker to allow for **this** job | **seconds** |
 | **Horizon `timeout`** | Worker **hard** limit per job (must be ≥ effective job timeout) | **seconds** |
 | **Redis `retry_after`** | Reservation / visibility window before job can be released again | **seconds**; must be **>** real job duration (and **>** job & worker timeouts) |
-| **Job** `$tries` / `$backoff` / `$maxExceptions` / `$retryUntil` | Retry policy for **application** failures | counts / **seconds** / datetime (per Laravel queue docs) |
+| **Job** `$tries` / `$backoff` / `$maxExceptions` / `$retryUntil` | Retry policy for **application** failures | counts / **seconds** (or array of seconds for staged backoff) / `DateTimeInterface` |
 | **Horizon `tries`** | Default attempts when the job does not define its own | count |
 
 Wrong ordering (`timeout` ≥ `retry_after`, or supervisor `timeout` too tight) → duplicate runs or killed jobs. Run `php artisan horizon:doctor` in the consuming app to catch several of these mismatches.
+
+## Job public properties — units (queueable class)
+
+| Property | Unit | Notes |
+|----------|------|--------|
+| `$connection` | name | `config/queue.php` connection key. |
+| `$queue` | name | Default queue for this class. |
+| `$delay` | **seconds** (int), **`DateTimeInterface`**, **`DateInterval`**, or array | Same shapes as `delay()` on the job / dispatch builder. |
+| `$afterCommit` | bool | Dispatch after DB commit. |
+| `$tries` | count | Max attempts (worker default can still apply if unset). |
+| `$maxExceptions` | count | Stop retrying after this many **uncaught** exceptions. |
+| `$timeout` | **seconds** | Per-job limit the worker enforces; must stay **strictly below** Redis `retry_after` and **≤** Horizon/worker `timeout`. |
+| `$backoff` | **seconds** or **list of seconds** | Delay before retries (Horizon passes the same shape as `queue:work --backoff`). |
+| `$retryUntil` | `DateTimeInterface` / timestamp | Attempts allowed until this time. |
 
 ## Listeners (`ShouldQueue`)
 

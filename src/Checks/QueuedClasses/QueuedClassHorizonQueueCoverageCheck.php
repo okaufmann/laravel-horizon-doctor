@@ -47,7 +47,7 @@ final class QueuedClassHorizonQueueCoverageCheck implements EnvironmentCheck
                 continue;
             }
 
-            $warnings[] = "Queued class `{$meta->fqn}` in `{$meta->filePath}` targets Redis queue `{$meta->literalQueue}` on connection `{$connectionName}`, but no Horizon supervisor in environment `{$environment}` processes that queue on that connection. Add a supervisor or align `config/horizon.php` → `environments.{$environment}`.";
+            $warnings[] = "Queued class `{$meta->fqn}` in `{$meta->filePath}` targets Redis queue `{$meta->literalQueue}` on Laravel queue connection `{$connectionName}` (`config/queue.php` → `connections`), but no Horizon supervisor in environment `{$environment}` processes that queue on a matching queue connection (including another Redis-backed name that shares the same `connections.*.connection` Redis client). Add a supervisor or align `config/horizon.php` → `environments.{$environment}`.";
         }
 
         return EnvironmentCheckResult::warnings($warnings);

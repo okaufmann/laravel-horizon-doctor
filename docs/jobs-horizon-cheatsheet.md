@@ -7,6 +7,49 @@ Quick reference when writing queueable jobs/listeners. Details and edge cases li
 - [Queues & jobs](https://laravel.com/docs/queues) — dispatch API, job classes, failures, batches, rate limits, etc.
 - [Horizon](https://laravel.com/docs/horizon) — supervisors, balancing, metrics, tags
 
+## Names that look alike (read this once)
+
+Laravel overloads the word **connection** in two places:
+
+| What people say | Config location | Example |
+|-----------------|-----------------|---------|
+| **Queue connection** (Laravel) | `config/queue.php` → `connections.{name}` | `redis`, `redis-long-running` — also what `#[Connection('…')]`, `dispatch()->onConnection('…')`, `queue.default`, and Horizon supervisor `connection` refer to |
+| **Redis client** (database config) | Nested key `connections.{name}.connection` inside `config/queue.php`, pointing at `config/database.php` → `redis.*` | Often `default` — **not** the same string as the queue connection name |
+
+Job payloads for the Redis driver live in Redis lists named like `queues:{queue}`. Two queue connections that point at the **same** Redis client usually share those lists for the same queue name, even though Horizon and your code use different **queue connection** labels.
+
+**Horizon’s own meta store** (`horizon.use` → another Redis connection) is separate; it is not where queued jobs are stored.
+
+### Diagram (Redis client → queue connection → Horizon → worker)
+
+```mermaid
+flowchart LR
+  subgraph DB["config/database.php"]
+    RClient["Redis client<br/>(e.g. default)"]
+  end
+
+  subgraph QP["config/queue.php → connections.*"]
+    QConn["Queue connection name<br/>(e.g. redis, redis-long-running)"]
+  end
+
+  subgraph HZ["config/horizon.php supervisor"]
+    SConn["connection: same name<br/>as queue connection"]
+    SQ["queue: job queue names"]
+  end
+
+  WK["Horizon / queue:work<br/>worker process"]
+
+  RClient -->|"nested .connection"| QConn
+  QConn -->|"supervisor.connection"| SConn
+  SQ --> WK
+  SConn --> WK
+  WK -->|"pops jobs from<br/>queues:{name}"| RClient
+
+  JOB["Queued job<br/>#[Connection] #[Queue]"] -.->|"selects queue connection<br/>+ queue name"| QConn
+```
+
+`horizon:doctor` uses **queue connection** in the overview table and in messages; run with `-v` for the same glossary in the terminal.
+
 ## Job class essentials
 
 - Implement `ShouldQueue` (or use a base that already does).
@@ -19,17 +62,17 @@ Quick reference when writing queueable jobs/listeners. Details and edge cases li
 |----------|-------------|
 | **Public properties** on the job: `$connection`, `$queue`, `$delay`, `$afterCommit`, `$tries`, `$maxExceptions`, `$timeout`, `$backoff`, `$retryUntil` | Defaults for every dispatch of this class |
 | **Chain on dispatch**: `SomeJob::dispatch(...)->onConnection()->onQueue()->delay()` | Per-dispatch override |
-| **Horizon / Redis** | Supervisor `queue` names must match what workers consume; connection must match `config/queue.php` |
+| **Horizon / Redis** | Supervisor `queue` names must match what workers consume; supervisor `connection` must be a Laravel **queue connection** key from `config/queue.php` |
 
 Use **either** stable defaults on the class **or** consistent dispatch chains — mixing without a clear rule is where configs drift.
 
-## `config/queue.php` — Redis connection (per connection name)
+## `config/queue.php` — one block per **queue connection** name
 
-These apply to the **queue backend**, not Horizon’s meta Redis (`horizon.use`).
+Each key under `connections` is a Laravel queue connection (`redis`, `redis-long-running`, …). These options configure the **queue backend**, not Horizon’s meta Redis (`horizon.use`).
 
 | Key | Unit | Role |
 |-----|------|------|
-| `driver` | — | Must be `redis` for Horizon workers on this connection. |
+| `driver` | — | Must be `redis` for Horizon workers that use this queue connection. |
 | `connection` | name | Which Redis **client** connection (`config/database.php` → `redis.*`) stores queue payloads. |
 | `queue` | name | **Default queue name** when a job does not specify one (also used as fallback when a Horizon supervisor’s `queue` list is empty). |
 | `retry_after` | **seconds** | After this long a **reserved** job is treated as stale and can be released back to Redis; must be **greater than** your longest real job run (and than worker/job `timeout`). See `Illuminate\Queue\RedisQueue` (`$retryAfter`). |

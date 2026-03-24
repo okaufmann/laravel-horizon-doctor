@@ -147,7 +147,7 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
 
             $list = $this->formatQueueList($queues);
             $queueKey = "connections.{$connectionName}.queue";
-            $short = "Queues {$list} are on `{$queueKey}` but no supervisor uses connection `{$connectionName}` in `environments.{$environment}`. Add supervisors or remove those names.";
+            $short = "Queues {$list} are on `{$queueKey}` but no supervisor uses queue connection `{$connectionName}` in `environments.{$environment}`. Add supervisors or remove those names.";
             $messages[] = $verbose ? $short.' '.self::HORIZON_QUEUE_NOTE : $short;
         }
 
@@ -176,8 +176,8 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
         $where = implode('; ', $lines);
         $queueKey = "connections.{$connectionName}.queue";
 
-        $short = "Queue `{$queue}` is on `{$queueKey}` but Horizon runs it on {$where}. Align `config/queue.php` with how jobs are dispatched, or add a supervisor on `{$connectionName}` in `environments.{$environment}`.";
-        $long = " Full detail: no supervisor in `environments.{$environment}` uses `connection` `{$connectionName}` for this queue; jobs dispatched on `{$connectionName}` would not match Horizon’s placement. ".self::HORIZON_QUEUE_NOTE;
+        $short = "Queue `{$queue}` is on `{$queueKey}` but Horizon runs it on {$where}. Align `config/queue.php` with how jobs are dispatched, or add a supervisor on queue connection `{$connectionName}` in `environments.{$environment}`.";
+        $long = " Full detail: no supervisor in `environments.{$environment}` uses Laravel queue connection `{$connectionName}` for this queue; jobs targeting that queue connection would not match Horizon’s supervisor `connection` labels. ".self::HORIZON_QUEUE_NOTE;
 
         return $verbose ? $short.$long : $short;
     }
@@ -185,7 +185,7 @@ final class RedisConnectionQueuesCoveredByHorizonCheck implements EnvironmentChe
     private function formatBareMismatchMessage(string $queue, string $connectionName, string $environment, bool $verbose): string
     {
         $queueKey = "connections.{$connectionName}.queue";
-        $short = "Queue `{$queue}` is on `{$queueKey}` but no supervisor covers it on connection `{$connectionName}` in `environments.{$environment}`. Add a supervisor or remove the queue name.";
+        $short = "Queue `{$queue}` is on `{$queueKey}` but no supervisor covers it on queue connection `{$connectionName}` in `environments.{$environment}`. Add a supervisor or remove the queue name.";
         $long = ' '.self::HORIZON_QUEUE_NOTE;
 
         return $verbose ? $short.$long : $short;

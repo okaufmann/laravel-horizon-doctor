@@ -43,7 +43,7 @@ php artisan horizon:doctor
 
 Errors block the exit code by default. Some **warnings** (for example Horizon supervises a queue that is not listed under the same connection in `config/queue.php`) print as warnings only. Use `php artisan horizon:doctor --strict-warnings` or `strict_warnings` in `config/horizon-doctor.php` to fail on those as well. The [GitHub Action](action/README.md) exposes the same behavior via the `strict-warnings` input.
 
-Each Horizon environment prints a **Redis queue overview table** (queue name × connection × whether it appears in `config/queue.php` × which supervisors run it × a short status). Use `--no-overview` or `show_overview` => `false` in `config/horizon-doctor.php` to hide it (for example in compact CI logs).
+Each Horizon environment prints a **Redis queue overview table** (queue name × **Laravel queue connection** × whether the name is listed in `config/queue.php` for that connection × which supervisors run it × status). Use `--no-overview` or `show_overview` => `false` in `config/horizon-doctor.php` to hide it (for example in compact CI logs). Run with `-v` (or `verbose` in config) for a short glossary: queue connection vs Redis client vs Horizon supervisor `connection`.
 
 For a compact reference when writing queueable jobs and listeners, see [docs/jobs-horizon-cheatsheet.md](docs/jobs-horizon-cheatsheet.md).
 

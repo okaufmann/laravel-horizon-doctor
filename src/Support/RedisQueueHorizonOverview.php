@@ -105,7 +105,7 @@ final class RedisQueueHorizonOverview
                 $other = array_values(array_diff($queueToHorizonConnections[$queue] ?? [], [$connectionName]));
                 sort($other, SORT_STRING);
                 if ($other !== []) {
-                    $status = 'Error: wrong connection — Horizon uses `'.implode('`, `', $other).'` only';
+                    $status = 'Error: wrong queue connection — Horizon supervisors use `'.implode('`, `', $other).'` only';
                 } else {
                     $status = 'Error: in queue.php but no supervisor on this connection';
                 }

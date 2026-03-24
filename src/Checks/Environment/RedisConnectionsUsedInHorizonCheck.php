@@ -29,8 +29,8 @@ final class RedisConnectionsUsedInHorizonCheck implements EnvironmentCheck
 
         $list = $unused->sort()->values()->implode('`, `');
 
-        $short = "Redis connection(s) `{$list}` in `config/queue.php` are unused by any supervisor in `environments.{$environment}`. Add a supervisor or remove the connection.";
-        $long = ' (`config/horizon.php` → supervisor `connection`.)';
+        $short = "Redis queue connection(s) `{$list}` in `config/queue.php` → `connections` are unused by any Horizon supervisor in `environments.{$environment}`. Add a supervisor or remove the entry.";
+        $long = ' Supervisor `connection` must name the same Laravel queue connection key (this is not `config/database.php` → `redis`.)';
 
         return EnvironmentCheckResult::errors([
             $verbose ? $short.$long : $short,

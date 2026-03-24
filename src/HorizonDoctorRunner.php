@@ -134,7 +134,9 @@ final class HorizonDoctorRunner
 
             if ($verbose) {
                 $command->info('Running environment-level queue checks...');
-                $command->comment('Redis connections in config/queue.php are compared to Horizon supervisors in config/horizon.php; queue names should line up with how you dispatch jobs. Warnings are consistency hints unless you pass --strict-warnings.');
+                $command->comment("Here 'queue connection' means a Laravel key under config/queue.php → connections (same name as Horizon supervisor `connection`, #[Connection(...)], and dispatch()->onConnection(...)).");
+                $command->comment('The nested key connections.{name}.connection points at a Redis client in config/database.php — not the same label; two queue connections can share one Redis client and the same Redis list queues:{queue}.');
+                $command->comment('Queue names should line up with how you dispatch jobs. Warnings are consistency hints unless you pass --strict-warnings.');
             }
 
             [$envFailed, $envWarnings] = $this->runEnvironmentChecks(
@@ -257,9 +259,10 @@ final class HorizonDoctorRunner
 
         if ($verbose) {
             $command->info("Redis queue overview (environment `{$environment}`)");
-            $command->comment('Rows are queue names on each Redis connection: `config/queue.php` → `connections.{name}.queue` vs supervisors under `config/horizon.php` → `environments.'.$environment.'`.');
+            $command->comment('Each row is one queue name on one Laravel queue connection (`config/queue.php` → `connections.{name}`). Column "Queue connection" is that Laravel name, not the Redis client (`connections.{name}.connection` → `config/database.php`).');
+            $command->comment('Compared against supervisors in `config/horizon.php` → `environments.'.$environment.'` (supervisor `connection` must be the same queue connection name).');
         } else {
-            $command->line('Queue / Horizon mismatches (use <fg=gray>-v</> for the full table)');
+            $command->line('Queue / Horizon mismatches (use <fg=gray>-v</> for the full table and terminology notes)');
         }
 
         if ($rows === []) {
@@ -278,12 +281,14 @@ final class HorizonDoctorRunner
         }
 
         $command->table(
-            ['Queue', 'Connection', 'In queue.php', 'Horizon supervisors', 'Status'],
+            ['Queue', 'Queue connection', 'In queue.php', 'Horizon supervisors', 'Status'],
             RedisQueueHorizonOverview::toTableBody($tableRows)
         );
 
         if ($verbose) {
-            $command->comment('Status: OK = listed under this connection in queue.php and a Horizon supervisor runs it here. Warning = Horizon runs it here but the name is not listed under this connection. Error = listed here but no supervisor on this connection (or Horizon only uses another connection).');
+            $command->comment('Status: OK = queue name is listed under this queue connection in queue.php and a Horizon supervisor uses this same queue connection. Warning = Horizon runs the queue on this queue connection but queue.php does not list the name there. Error = queue.php lists it here but no supervisor uses this queue connection (or supervisors only use another queue connection name).');
+        } elseif ($tableRows !== []) {
+            $command->comment('"Queue connection" = Laravel name in config/queue.php → connections (not the Redis server client label).');
         }
 
         $command->newLine();

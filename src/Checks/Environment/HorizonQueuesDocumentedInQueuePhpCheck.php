@@ -8,12 +8,12 @@ use Okaufmann\LaravelHorizonDoctor\Checks\EnvironmentCheckResult;
 use Okaufmann\LaravelHorizonDoctor\Support\QueueConfigNormalizer;
 
 /**
- * Warns when Horizon supervises queues on a Redis connection but those names are not listed under
- * the same connection in config/queue.php — dispatch defaults and docs can then disagree with Horizon.
+ * Warns when Horizon supervises queues on a Redis-backed Laravel queue connection but those names are not listed under
+ * the same queue connection in config/queue.php — dispatch defaults and docs can then disagree with Horizon.
  */
 final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
 {
-    private const NOTE = 'This is a consistency check: `config/queue.php` documents the default queue name(s) for each connection (and is the fallback when a supervisor’s `queue` in `config/horizon.php` is empty). Horizon still runs the supervisor `queue` list when it is non-empty.';
+    private const NOTE = 'This is a consistency check: `config/queue.php` documents the default queue name(s) for each Laravel queue connection (and is the fallback when a supervisor’s `queue` in `config/horizon.php` is empty). Horizon still runs the supervisor `queue` list when it is non-empty.';
 
     public function check(string $environment, array $mergedHorizonSupervisors, array $queueConnections, bool $verbose = false): EnvironmentCheckResult
     {
@@ -91,7 +91,7 @@ final class HorizonQueuesDocumentedInQueuePhpCheck implements EnvironmentCheck
 
         $missingHuman = implode('; ', $parts);
 
-        $short = "`{$connectionName}`: Horizon runs {$missingHuman} but `{$queueKey}` does not list ".(count($missingQueueToSupervisors) === 1 ? 'that queue' : 'those queues')." (documented: {$documentedHuman}). Add the names to `queue.php` or change supervisor `queue` / `connection` in `environments.{$environment}`.";
+        $short = "Queue connection `{$connectionName}`: Horizon runs {$missingHuman} but `{$queueKey}` does not list ".(count($missingQueueToSupervisors) === 1 ? 'that queue' : 'those queues')." (documented: {$documentedHuman}). Add the names to `queue.php` or change supervisor `queue` / `connection` in `environments.{$environment}`.";
 
         return $verbose ? $short.' '.self::NOTE : $short;
     }

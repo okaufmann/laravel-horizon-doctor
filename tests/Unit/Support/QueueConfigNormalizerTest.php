@@ -53,3 +53,34 @@ it('uses supervisor queues when non-empty', function () {
 
     expect(QueueConfigNormalizer::effectiveHorizonQueuesForSupervisor($supervisor, $connections)->all())->toBe(['alpha']);
 });
+
+it('detects two redis Laravel queue connections that share the same Redis backend', function () {
+    $connections = [
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => 'default',
+        ],
+        'redis-long-running' => [
+            'driver' => 'redis',
+            'connection' => 'default',
+        ],
+    ];
+
+    expect(QueueConfigNormalizer::redisQueueConnectionsShareSameBackend($connections, 'redis', 'redis-long-running'))->toBeTrue()
+        ->and(QueueConfigNormalizer::redisQueueConnectionsShareSameBackend($connections, 'redis', 'redis'))->toBeTrue();
+});
+
+it('detects redis Laravel queue connections that use different Redis backends', function () {
+    $connections = [
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => 'default',
+        ],
+        'redis-cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+        ],
+    ];
+
+    expect(QueueConfigNormalizer::redisQueueConnectionsShareSameBackend($connections, 'redis', 'redis-cache'))->toBeFalse();
+});

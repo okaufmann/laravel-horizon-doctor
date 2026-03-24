@@ -71,4 +71,37 @@ final class QueueConfigNormalizer
             ->sort(SORT_STRING)
             ->values();
     }
+
+    /**
+     * Whether jobs dispatched on $connectionA and workers using $connectionB share the same Redis job storage
+     * for a given queue name. Laravel names Redis lists `queues:{queue}`; the Laravel queue connection label
+     * (`redis` vs `redis-long-running`) does not change that key when both connections use the same
+     * `config/queue.php` → `connections.*.connection` Redis handle.
+     *
+     * @param  array<string, array<string, mixed>>  $queueConnections
+     */
+    public static function redisQueueConnectionsShareSameBackend(
+        array $queueConnections,
+        string $connectionA,
+        string $connectionB,
+    ): bool {
+        if ($connectionA === $connectionB) {
+            return true;
+        }
+
+        $a = $queueConnections[$connectionA] ?? null;
+        $b = $queueConnections[$connectionB] ?? null;
+        if (! is_array($a) || ! is_array($b)) {
+            return false;
+        }
+
+        if (($a['driver'] ?? null) !== 'redis' || ($b['driver'] ?? null) !== 'redis') {
+            return false;
+        }
+
+        $redisA = $a['connection'] ?? 'default';
+        $redisB = $b['connection'] ?? 'default';
+
+        return is_string($redisA) && is_string($redisB) && $redisA === $redisB;
+    }
 }

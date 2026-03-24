@@ -64,7 +64,14 @@ final class QueuedClassHorizonQueueCoverageCheck implements EnvironmentCheck
                 continue;
             }
 
-            if (($supervisorConfig['connection'] ?? null) !== $connectionName) {
+            $supervisorConnection = $supervisorConfig['connection'] ?? null;
+            if (! is_string($supervisorConnection)
+                || $supervisorConnection === ''
+                || ! QueueConfigNormalizer::redisQueueConnectionsShareSameBackend(
+                    $queueConnections,
+                    $connectionName,
+                    $supervisorConnection,
+                )) {
                 continue;
             }
 

@@ -27,13 +27,13 @@ The service provider and `LaravelHorizonDoctor` facade are [auto-discovered](htt
 
 ### Publish configuration (optional)
 
-The package works without publishing: it merges the default [`config/horizon-doctor.php`](config/horizon-doctor.php) from the package. Run publish when you want to customize options in your app:
+You do not have to publish anything; the package merges its defaults. When you want to change options, run:
 
 ```bash
-php artisan vendor:publish --tag=laravel-horizon-doctor-config
+php artisan vendor:publish --tag=horizon-doctor-config
 ```
 
-This creates `config/horizon-doctor.php`. The publish tag follows the convention used by [Spatie Laravel Package Tools](https://github.com/spatie/laravel-package-tools) (`{package-name}-config`).
+That adds `config/horizon-doctor.php` to your app.
 
 ## Usage
 

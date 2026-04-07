@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-horizon-doctor` will be documented in this file.
 
+## v2.6.0 - 2026-04-07
+
+**Full Changelog**: https://github.com/okaufmann/laravel-horizon-doctor/compare/v2.5.2...v2.6.0
+
 ## v2.5.2 - 2026-03-24
 
 **Full Changelog**: https://github.com/okaufmann/laravel-horizon-doctor/compare/v2.5.1...v2.5.2

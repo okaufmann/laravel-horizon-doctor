@@ -15,7 +15,7 @@ jobs:
           ref: main
 
       - name: Update Changelog
-        uses: stefanzweifel/changelog-updater-action@v1.12.0
+        uses: stefanzweifel/changelog-updater-action@v1.13.3
         with:
           latest-version: ${{ github.event.release.name }}
           release-notes: ${{ github.event.release.body }}
